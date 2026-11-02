@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Remind - חוסן וניהול הרגלים</title>
+  <title>Remind</title>
   <meta name="theme-color" content="#16cba0">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Remind">
@@ -438,7 +438,6 @@
         };
       });
 
-      // מצב תצוגה: 'auto', 'light', 'dark'
       const [themeMode, setThemeMode] = useState(() => {
         return localStorage.getItem('eitan_theme_mode') || 'auto';
       });
@@ -465,7 +464,7 @@
         return () => clearInterval(interval);
       }, [themeMode]);
 
-      const [activeTab, setActiveTab] = useState('timer'); // 'timer', 'calendar', 'settings'
+      const [activeTab, setActiveTab] = useState('timer');
 
       const todayDate = new Date();
       const currentMonthKey = `eitan_month_${todayDate.getFullYear()}_${todayDate.getMonth() + 1}`;
@@ -526,7 +525,7 @@
         return () => clearInterval(interval);
       }, [startTime, isRegistered]);
 
-      const days = Math.floor(elapsedSeconds / (3600 * 24)); // מספר הימים שעברו בטיימר
+      const days = Math.floor(elapsedSeconds / (3600 * 24));
       const hours = Math.floor((elapsedSeconds % (3600 * 24)) / 3600);
       const minutes = Math.floor((elapsedSeconds % 3600) / 60);
       const seconds = elapsedSeconds % 60;
@@ -671,7 +670,7 @@
                   <div className="text-center space-y-3 flex flex-col items-center">
                     <RemindLogo size="lg" />
                     <h1 className="text-2xl font-bold pt-2">ברוכים הבאים ל־Remind</h1>
-                    <p className="text-xs opacity-70">Remind — מרחב אישי לבניית חוסן וניהול הרגלים</p>
+                    <p className="text-xs opacity-70">Remind</p>
                   </div>
                   <div className="space-y-4">
                     <div>
@@ -786,7 +785,7 @@
               </div>
             )}
 
-            {/* --- מסך 2: מפת טיפוס ההר המסונכרנת עם הטיימר (כפתורים גדולים ומרווחים) --- */}
+            {/* --- מסך 2: מפת טיפוס ההר המסונכרנת עם הטיימר (מסלול Z מושלם) --- */}
             {activeTab === 'calendar' && (
               <div className="space-y-4">
                 
@@ -833,7 +832,6 @@
                     const manualStatus = monthLogs[dayNum];
                     const isLockedByTimer = dayNum > (days + 1);
 
-                    // כפתורים גדולים ובולטים יותר (w-12 h-12) עם מרווחים שווים ומסודרים
                     let btnStyle = "bg-zinc-900/85 border-white/25 text-white hover:scale-110";
                     let content = <span className="text-sm font-bold">{dayNum}</span>;
 
