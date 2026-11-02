@@ -568,17 +568,20 @@
             body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
           });
           
+          console.log("Response status:", response.status);
+          const data = await response.json();
+          console.log("Response data:", data);
+          
           if (!response.ok) {
-            const errorData = await response.json();
-            console.error("Gemini API Error:", errorData);
-            setAiAdvice(`שגיאה: ${errorData.error?.message || 'בעיה בחיבור ל-API'}`);
+            console.error("Gemini API Error:", data);
+            setAiAdvice(`שגיאה ${response.status}: ${data.error?.message || JSON.stringify(data)}`);
             return;
           }
           
-          const data = await response.json();
           if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
             setAiAdvice(data.candidates[0].content.parts[0].text);
           } else {
+            console.error("No text in response:", data);
             setAiAdvice("תגובה לא תקינה מהשרת.");
           }
         } catch (error) {
