@@ -574,7 +574,7 @@
           
           if (!response.ok) {
             console.error("Ollama error:", response.status);
-            setAiAdvice(`שגיאה: אנא בדוק שOllama רץ (ollama serve בTerminal)`);
+            setAiAdvice(`❌ שגיאה בחיבור ל-Ollama (Status: ${response.status}). וודא שהוא רץ בـTerminal!`);
             return;
           }
           
@@ -582,11 +582,14 @@
           if (data.response) {
             setAiAdvice(data.response);
           } else {
-            setAiAdvice("תגובה לא תקינה מ-Ollama.");
+            setAiAdvice("⚠️ תגובה לא ברורה מ-Ollama. נסה שוב!");
           }
         } catch (error) {
           console.error("Ollama fetch error:", error);
-          setAiAdvice(`שגיאה: ${error.message} - וודא שOllama רץ`);
+            setAiAdvice(`❌ לא ניתן להתחבר ל-Ollama בטקסט. וודא ש:
+1️⃣ Ollama מותקן (https://ollama.ai)
+2️⃣ Terminal פתוח עם: ollama serve
+3️⃣ הדגם Mistral הורד: ollama pull mistral`);
         } finally {
           setIsAiLoading(false);
         }
@@ -908,14 +911,16 @@
                   <textarea value={profile.promise} onChange={(e) => setProfile({...profile, promise: e.target.value})} className="w-full bg-[var(--input-bg)] border border-[var(--card-border)] rounded-xl p-3 text-xs h-16 resize-none" />
                 </div>
                 <div>
-                  <label className="opacity-70 block mb-1">⚙️ Ollama (מקומי, לא צריך API Key!)</label>
-                  <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-3 text-xs text-blue-300 mb-3">
-                    <p>🎯 פתח Terminal והקלד:</p>
-                    <code className="block mt-2 bg-black/30 p-2 rounded text-blue-200">ollama serve</code>
-                    <p className="mt-2">אחרי זה, לחץ "קבל חיזוק מנטלי" בעמוד! ✨</p>
+                  <label className="opacity-70 block mb-1">⚙️ Ollama - AI מקומי (חינמי לגמרי!)</label>
+                  <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4 text-xs text-green-300 mb-4 space-y-2">
+                    <p className="font-bold">✅ בדוקת התקנה:</p>
+                    <p>1️⃣ הורדה: https://ollama.ai</p>
+                    <p>2️⃣ Terminal: <code className="bg-black/40 px-2 py-1 rounded">ollama pull mistral</code></p>
+                    <p>3️⃣ הפעלה: <code className="bg-black/40 px-2 py-1 rounded">ollama serve</code></p>
+                    <p className="pt-2 border-t border-green-500/20">כשתראה בـTerminal "Listening on 127.0.0.1:11434" - לחץ את הכפתור! 🚀</p>
                   </div>
-                  <button onClick={() => { localStorage.setItem('eitan_ollama_enabled', 'true'); alert('Ollama מופעל! 🚀'); }} className="w-full py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold text-sm transition-all">
-                    ✓ אישרתי שOllama רץ
+                  <button onClick={() => { localStorage.setItem('eitan_ollama_enabled', 'true'); alert('✓ אישור! Ollama מופעל. בואו נתחיל! 🎯'); }} className="w-full py-3 px-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl font-bold text-sm transition-all shadow-lg shadow-green-500/20 active:scale-95">
+                    ✓ Ollama רץ ו"מוכן ללחימה"! 🔥
                   </button>
                 </div>
                 <button onClick={() => { localStorage.setItem('eitan_profile', JSON.stringify(profile)); alert('ההגדרות נשמרו בהצלחה!'); }} className="py-3 px-6 rounded-xl bg-[#007aff] text-white font-medium shadow-lg shadow-blue-500/20 active:scale-95 transition-all">
