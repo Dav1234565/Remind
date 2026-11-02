@@ -482,7 +482,7 @@
       const [tempPassword, setTempPassword] = useState('');
 
       const [apiKey, setApiKey] = useState(() => {
-        return localStorage.getItem('eitan_mistral_key') || '';
+        return localStorage.getItem('eitan_groq_key') || '';
       });
 
       const [aiAdvice, setAiAdvice] = useState('');
@@ -562,14 +562,14 @@
         תן לי חיזוק מנטלי קצר וממוקד בעברית (עד 3 משפטים).`;
 
         try {
-          const response = await fetch(`https://api.mistral.ai/v1/chat/completions`, {
+          const response = await fetch(`https://api.groq.com/openai/v1/chat/completions`, {
             method: "POST",
             headers: { 
               "Content-Type": "application/json",
               "Authorization": `Bearer ${apiKey}`
             },
             body: JSON.stringify({
-              model: "mistral-tiny",
+              model: "mixtral-8x7b-32768",
               messages: [
                 {
                   role: "user",
@@ -583,8 +583,8 @@
           
           if (!response.ok) {
             const errorData = await response.json();
-            console.error("Mistral API Error:", errorData);
-            setAiAdvice(`שגיאה: ${errorData.message || 'בעיה בחיבור ל-API'}`);
+            console.error("Groq API Error:", errorData);
+            setAiAdvice(`שגיאה: ${errorData.error?.message || 'בעיה בחיבור ל-API'}`);
             return;
           }
           
@@ -595,7 +595,7 @@
             setAiAdvice("תגובה לא תקינה מהשרת.");
           }
         } catch (error) {
-          console.error("Mistral fetch error:", error);
+          console.error("Groq fetch error:", error);
           setAiAdvice(`שגיאה: ${error.message}`);
         } finally {
           setIsAiLoading(false);
@@ -796,7 +796,7 @@
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
                       <span className="material-symbols-rounded text-blue-500">smart_toy</span>
-                      <h3 className="text-sm font-bold">היועץ והמאמן האישי (Mistral AI)</h3>
+                      <h3 className="text-sm font-bold">היועץ והמאמן האישי (Groq AI)</h3>
                     </div>
                     <button onClick={fetchAiAdvice} disabled={isAiLoading} className="px-4 py-2 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-500 font-medium text-xs transition-all active:scale-95">
                       {isAiLoading ? 'חושב...' : 'קבל חיזוק מנטלי'}
@@ -918,8 +918,8 @@
                   <textarea value={profile.promise} onChange={(e) => setProfile({...profile, promise: e.target.value})} className="w-full bg-[var(--input-bg)] border border-[var(--card-border)] rounded-xl p-3 text-xs h-16 resize-none" />
                 </div>
                 <div>
-                  <label className="opacity-70 block mb-1">מפתח Mistral API</label>
-                  <input type="password" value={apiKey} onChange={(e) => { setApiKey(e.target.value); localStorage.setItem('eitan_mistral_key', e.target.value); }} placeholder="הדבק את ה-API Key שלך..." className="w-full bg-[var(--input-bg)] border border-[var(--card-border)] rounded-xl px-3 py-2.5 text-sm" />
+                  <label className="opacity-70 block mb-1">מפתח Groq API (חינמי!)</label>
+                  <input type="password" value={apiKey} onChange={(e) => { setApiKey(e.target.value); localStorage.setItem('eitan_groq_key', e.target.value); }} placeholder="הדבק את ה-API Key שלך..." className="w-full bg-[var(--input-bg)] border border-[var(--card-border)] rounded-xl px-3 py-2.5 text-sm" />
                 </div>
                 <button onClick={() => { localStorage.setItem('eitan_profile', JSON.stringify(profile)); alert('ההגדרות נשמרו בהצלחה!'); }} className="py-3 px-6 rounded-xl bg-[#007aff] text-white font-medium shadow-lg shadow-blue-500/20 active:scale-95 transition-all">
                   שמור שינויים
