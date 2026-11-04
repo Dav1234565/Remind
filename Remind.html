@@ -28,6 +28,9 @@
   <!-- Canvas Confetti Library -->
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
+  <!-- EmailJS Browser SDK CDN -->
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+
   <style>
     /* משתני צבעים דינמיים למצב בהיר / כהה בסגנון אפל */
     .light-theme {
@@ -434,7 +437,8 @@
           age: '',
           gender: 'זכר',
           promise: '',
-          signatureDataUrl: ''
+          signatureDataUrl: '',
+          email: ''
         };
       });
 
@@ -593,6 +597,50 @@
         } finally {
           setIsAiLoading(false);
         }
+      };
+
+      // פונקציית שליחת מייל באמצעות EmailJS
+      const handleSendTestEmail = () => {
+        if (!profile.email) {
+          alert('אנא הזן כתובת מייל תקינה ושמור את ההגדרות תחילה.');
+          return;
+        }
+
+        const serviceID = 'service_h0qu6xd';   // החלף ב-Service ID שלך מ-EmailJS
+        const templateID = 'template_lp3daxo'; // החלף ב-Template ID שלך מ-EmailJS
+        const publicKey = '72l3V647Lulo45TKu';   // החלף ב-Public Key שלך מ-EmailJS
+
+        const templateParams = {
+          to_email: profile.email,
+          to_name: profile.name || 'משתמש Remind',
+          message: 'התחברות מוצלחת! מערכת Remind מחוברת כעת לג\'ימייל שלך ותשלח אלייך עדכונים.',
+        };
+
+        if (typeof emailjs === 'undefined') {
+          alert('ספריית EmailJS טרם נטענה. ודא חיבור לאינטרנט.');
+          return;
+        }
+
+        emailjs.send(serviceID, templateID, templateParams, publicKey)
+          .then((response) => {
+            alert('מייל בדיקה נשלח בהצלחה לתיבת הג\'ימייל שלך! 🚀');
+          })
+          .catch((err) => {
+            const status = Number(err?.status) || 0;
+            const details = typeof err?.text === 'string' ? err.text : '';
+            console.error('EmailJS send failed:', { status, details });
+
+            let explanation = details ? `\nפרטים מ-EmailJS: ${details}` : '';
+            if (status === 403) {
+              if (details.includes('non-browser environments')) {
+                explanation += '\nEmailJS חוסם בקשות מסביבה שאינה דפדפן. פתח את Remind דרך שרת מקומי או אתר HTTPS, ולא ישירות כקובץ file://.';
+              } else {
+                explanation += '\nEmailJS דחה את הבקשה. בדוק שהמפתחות נכונים ושהדומיין שממנו נפתח Remind מאושר בהגדרות האבטחה של EmailJS.';
+              }
+            }
+
+            alert(`שליחת המייל נכשלה${status ? ` (HTTP ${status})` : ''}.${explanation}`);
+          });
       };
 
       const startDrawing = (e) => {
@@ -898,6 +946,35 @@
                     </button>
                     <button onClick={() => { setThemeMode('dark'); localStorage.setItem('eitan_theme_mode', 'dark'); }} className={`p-3 rounded-xl border text-center transition-all ${themeMode === 'dark' ? 'border-blue-500 bg-blue-500/10 font-bold' : 'border-[var(--card-border)]'}`}>
                       מצב כהה
+                    </button>
+                  </div>
+                </div>
+
+                {/* --- אזור חיבור מייל (EmailJS) --- */}
+                <div className="p-4 rounded-2xl bg-[var(--input-bg)] border border-[var(--card-border)] space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-rounded text-blue-500">mail</span>
+                      <span className="font-bold text-sm">בדיקת שליחת מייל (EmailJS)</span>
+                    </div>
+                    <span className="text-[10px] bg-emerald-500/10 text-emerald-500 px-2 py-0.5 rounded-full font-bold">שליחת בדיקה</span>
+                  </div>
+                  <p className="opacity-70 leading-relaxed">
+                    הזן כתובת מייל כדי לשלוח אליה מייל בדיקה דרך EmailJS.
+                  </p>
+                  <div className="flex gap-2 pt-1">
+                    <input
+                      type="email"
+                      placeholder="your.email@gmail.com"
+                      value={profile.email || ''}
+                      onChange={(e) => setProfile({...profile, email: e.target.value})}
+                      className="flex-1 bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-blue-500"
+                    />
+                    <button
+                      onClick={handleSendTestEmail}
+                      className="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-zinc-950 font-bold transition-all shadow-md active:scale-95 whitespace-nowrap"
+                    >
+                      שלח מייל בדיקה ✉️
                     </button>
                   </div>
                 </div>
