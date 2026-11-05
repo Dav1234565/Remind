@@ -21,15 +21,15 @@
   <!-- React & ReactDOM CDN -->
   <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+
+  <!-- Supabase authentication -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   
   <!-- Babel Compiler for JSX -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
   <!-- Canvas Confetti Library -->
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-
-  <!-- EmailJS Browser SDK CDN -->
-  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 
   <style>
     /* משתני צבעים דינמיים למצב בהיר / כהה בסגנון אפל */
@@ -56,16 +56,16 @@
 
     .dark-theme {
       --bg-color: #000000;
-      --text-main: #f5f5f7;
-      --card-bg: rgba(28, 28, 30, 0.55);
-      --card-border: rgba(255, 255, 255, 0.12);
-      --card-shadow: rgba(0, 0, 0, 0.5);
-      --nav-bg: rgba(28, 28, 30, 0.65);
-      --nav-border: rgba(255, 255, 255, 0.18);
-      --nav-shadow: rgba(0, 0, 0, 0.7);
-      --nav-item-color: #a1a1aa;
-      --nav-hover-bg: rgba(255, 255, 255, 0.12);
-      --input-bg: rgba(30, 30, 32, 0.72);
+      --text-main: #1d1d1f;
+      --card-bg: #ffffff;
+      --card-border: rgba(0, 0, 0, 0.1);
+      --card-shadow: rgba(255, 255, 255, 0.08);
+      --nav-bg: #ffffff;
+      --nav-border: rgba(0, 0, 0, 0.12);
+      --nav-shadow: rgba(255, 255, 255, 0.12);
+      --nav-item-color: #3a3a3c;
+      --nav-hover-bg: rgba(0, 0, 0, 0.06);
+      --input-bg: #ffffff;
       --sky-gradient: linear-gradient(180deg, #0b132b 0%, #1c2541 60%, #3a506b 100%);
       --mountain-stop-1: #1d2d44;
       --mountain-stop-2: #131a26;
@@ -73,6 +73,20 @@
       --mountain-stop-4: #05070a;
       --shadow-opacity: 0.6;
       --snow-opacity: 0.6;
+    }
+
+    .dark-theme button {
+      background-color: #ffffff !important;
+      border-color: rgba(0, 0, 0, 0.12) !important;
+      color: #1d1d1f !important;
+    }
+
+    .light-theme,
+    .dark-theme {
+      min-height: 100vh;
+      min-height: 100dvh;
+      background-color: var(--bg-color);
+      color: var(--text-main);
     }
 
     body {
@@ -330,6 +344,23 @@
         gap: 0.5rem;
       }
 
+      .settings-panel {
+        width: 100%;
+        padding: 1rem !important;
+        margin-inline: auto;
+        overflow-wrap: anywhere;
+      }
+
+      .settings-panel button,
+      .settings-panel input,
+      .settings-panel textarea {
+        min-height: 44px;
+      }
+
+      .settings-panel textarea {
+        min-height: 72px;
+      }
+
       .nav-container {
         bottom: calc(10px + env(safe-area-inset-bottom));
         width: min(92vw, 360px);
@@ -387,6 +418,10 @@
 
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
+    const supabaseClient = window.supabase.createClient(
+      'https://lguuxrwjwwzxkhydjryo.supabase.co',
+      'sb_publishable_mOtrogkoIlfugUNztuFyYA_yN7T-av8'
+    );
 
     const COMMON_TRIGGER_REASONS = [
       "עייפות קיצונית / חוסר שינה",
@@ -426,25 +461,28 @@
     }
 
     function RemindApp() {
-      const [isRegistered, setIsRegistered] = useState(() => {
-        return localStorage.getItem('eitan_registered') === 'true';
+      const [authUser, setAuthUser] = useState(null);
+      const [authLoading, setAuthLoading] = useState(true);
+      const [userDataReady, setUserDataReady] = useState(false);
+      const [authMode, setAuthMode] = useState('signup');
+      const [authEmail, setAuthEmail] = useState('');
+      const [signupName, setSignupName] = useState('');
+      const [signupPromise, setSignupPromise] = useState('');
+      const [authFeedback, setAuthFeedback] = useState('');
+      const [authError, setAuthError] = useState('');
+      const [authSubmitting, setAuthSubmitting] = useState(false);
+      const [isRegistered, setIsRegistered] = useState(false);
+      const [onboardingError, setOnboardingError] = useState('');
+      const [profile, setProfile] = useState({
+        name: '',
+        age: '',
+        gender: 'זכר',
+        promise: '',
+        signatureDataUrl: '',
+        email: ''
       });
 
-      const [profile, setProfile] = useState(() => {
-        const saved = localStorage.getItem('eitan_profile');
-        return saved ? JSON.parse(saved) : {
-          name: '',
-          age: '',
-          gender: 'זכר',
-          promise: '',
-          signatureDataUrl: '',
-          email: ''
-        };
-      });
-
-      const [themeMode, setThemeMode] = useState(() => {
-        return localStorage.getItem('eitan_theme_mode') || 'auto';
-      });
+      const [themeMode, setThemeMode] = useState('auto');
 
       const [currentTheme, setCurrentTheme] = useState('dark-theme');
 
@@ -474,48 +512,143 @@
       const currentMonthKey = `eitan_month_${todayDate.getFullYear()}_${todayDate.getMonth() + 1}`;
       
       const [selectedWeek, setSelectedWeek] = useState(1);
-      const [monthLogs, setMonthLogs] = useState(() => {
-        const saved = localStorage.getItem(currentMonthKey);
-        return saved ? JSON.parse(saved) : {};
-      });
+      const [monthLogs, setMonthLogs] = useState({});
 
       const [selectedDay, setSelectedDay] = useState(null);
       const [showDayModal, setShowDayModal] = useState(false);
 
       const [onboardingStep, setOnboardingStep] = useState(1);
-      const [tempPassword, setTempPassword] = useState('');
-
-      const [ollamaEnabled, setOllamaEnabled] = useState(() => {
-        return localStorage.getItem('eitan_ollama_enabled') === 'true';
-      });
-
-      const [aiAdvice, setAiAdvice] = useState('');
-      const [isAiLoading, setIsAiLoading] = useState(false);
 
       const canvasRef = useRef(null);
       const [isDrawing, setIsDrawing] = useState(false);
       const [hasSigned, setHasSigned] = useState(false);
 
-      const [startTime, setStartTime] = useState(() => {
-        const saved = localStorage.getItem('eitan_streak_start');
-        if (saved) {
-          const parsed = parseInt(saved, 10);
-          if (!isNaN(parsed)) return parsed;
-        }
-        const now = Date.now();
-        localStorage.setItem('eitan_streak_start', now.toString());
-        return now;
-      });
-
-      const [logs, setLogs] = useState(() => {
-        const saved = localStorage.getItem('eitan_logs');
-        return saved ? JSON.parse(saved) : [];
-      });
+      const [startTime, setStartTime] = useState(Date.now());
+      const [logs, setLogs] = useState([]);
 
       const [elapsedSeconds, setElapsedSeconds] = useState(0);
       const [showResetModal, setShowResetModal] = useState(false);
       const [selectedCategory, setSelectedCategory] = useState(COMMON_TRIGGER_REASONS[0]);
       const [resetReason, setResetReason] = useState('');
+      const authUserIdRef = useRef(null);
+
+      const accountStorageKey = (key, userId = authUser?.id) => (
+        userId ? `remind:${userId}:${key}` : null
+      );
+
+      useEffect(() => {
+        let isMounted = true;
+        const { data: { subscription } } = supabaseClient.auth.onAuthStateChange((_event, session) => {
+          if (isMounted) {
+            const nextUser = session?.user || null;
+            const nextUserId = nextUser?.id || null;
+            if (authUserIdRef.current !== nextUserId) {
+              authUserIdRef.current = nextUserId;
+              setUserDataReady(false);
+            }
+            setAuthUser(nextUser);
+            setAuthLoading(false);
+          }
+        });
+
+        supabaseClient.auth.getSession()
+          .then(({ data, error }) => {
+            if (!isMounted) return;
+            if (error) {
+              setAuthError('לא ניתן לבדוק את מצב ההתחברות. נסה לרענן את הדף.');
+              console.error('Supabase session check failed:', error.message);
+            }
+            const nextUser = data?.session?.user || null;
+            const nextUserId = nextUser?.id || null;
+            if (authUserIdRef.current !== nextUserId) {
+              authUserIdRef.current = nextUserId;
+              setUserDataReady(false);
+            }
+            setAuthUser(nextUser);
+            setAuthLoading(false);
+          })
+          .catch((error) => {
+            if (!isMounted) return;
+            console.error('Supabase session check request failed:', error);
+            setAuthError('לא ניתן לבדוק את מצב ההתחברות. בדוק את החיבור ונסה לרענן.');
+            authUserIdRef.current = null;
+            setAuthUser(null);
+            setAuthLoading(false);
+          });
+
+        return () => {
+          isMounted = false;
+          subscription.unsubscribe();
+        };
+      }, []);
+
+      useEffect(() => {
+        if (!authUser) {
+          setUserDataReady(false);
+          setIsRegistered(false);
+          setProfile({
+            name: '',
+            age: '',
+            gender: 'זכר',
+            promise: '',
+            signatureDataUrl: '',
+            email: ''
+          });
+          return;
+        }
+
+        const userId = authUser.id;
+        const readAccountValue = (key) => localStorage.getItem(accountStorageKey(key, userId));
+        const savedProfile = readAccountValue('profile');
+        const metadata = authUser.user_metadata || {};
+        let localProfile = {};
+        try {
+          localProfile = savedProfile ? JSON.parse(savedProfile) : {};
+        } catch (error) {
+          console.error('Saved profile is invalid:', error);
+        }
+
+        setProfile({
+          name: metadata.name || localProfile.name || '',
+          age: localProfile.age || '',
+          gender: localProfile.gender || 'זכר',
+          promise: metadata.promise || localProfile.promise || '',
+          signatureDataUrl: localProfile.signatureDataUrl || '',
+          email: authUser.email || ''
+        });
+        setThemeMode(readAccountValue('theme_mode') || 'auto');
+
+        const savedStartTime = Number(readAccountValue('streak_start'));
+        const nextStartTime = Number.isFinite(savedStartTime) && savedStartTime > 0
+          ? savedStartTime
+          : Date.now();
+        setStartTime(nextStartTime);
+        if (!savedStartTime) {
+          localStorage.setItem(accountStorageKey('streak_start', userId), String(nextStartTime));
+        }
+
+        const savedLogs = readAccountValue('logs');
+        try {
+          setLogs(savedLogs ? JSON.parse(savedLogs) : []);
+        } catch (error) {
+          console.error('Saved activity log is invalid:', error);
+          setLogs([]);
+        }
+
+        const savedMonth = readAccountValue(currentMonthKey);
+        try {
+          setMonthLogs(savedMonth ? JSON.parse(savedMonth) : {});
+        } catch (error) {
+          console.error('Saved calendar data is invalid:', error);
+          setMonthLogs({});
+        }
+
+        setIsRegistered(
+          metadata.remind_registered === true ||
+          readAccountValue('registered') === 'true'
+        );
+        setUserDataReady(true);
+      }, [authUser?.id]);
 
       useEffect(() => {
         if (!isRegistered) return;
@@ -535,6 +668,64 @@
       const seconds = elapsedSeconds % 60;
       const circleProgress = (seconds / 60) * 100;
 
+      const handleEmailAuth = async (event) => {
+        event.preventDefault();
+        setAuthError('');
+        setAuthFeedback('');
+
+        const email = authEmail.trim().toLowerCase();
+        if (!email || (authMode === 'signup' && (!signupName.trim() || !signupPromise.trim()))) {
+          setAuthError('יש למלא את כל הפרטים לפני השליחה.');
+          return;
+        }
+
+        setAuthSubmitting(true);
+        const redirectTo = `${window.location.origin}${window.location.pathname}`;
+        try {
+          const { error } = await supabaseClient.auth.signInWithOtp({
+            email,
+            options: {
+              emailRedirectTo: redirectTo,
+              shouldCreateUser: authMode === 'signup',
+              ...(authMode === 'signup' ? {
+                data: {
+                  name: signupName.trim(),
+                  promise: signupPromise.trim(),
+                  remind_registered: false
+                }
+              } : {})
+            }
+          });
+
+          if (error) {
+            console.error('Supabase email authentication failed:', error.message);
+            setAuthError('לא הצלחנו לשלוח קישור למייל. בדוק את הכתובת ונסה שוב.');
+            return;
+          }
+
+          setAuthFeedback('שלחנו לך קישור התחברות למייל. פתח אותו באותו מכשיר כדי להיכנס.');
+        } catch (error) {
+          console.error('Supabase email request failed:', error);
+          setAuthError('לא הצלחנו לשלוח קישור למייל. בדוק את הכתובת ונסה שוב.');
+        } finally {
+          setAuthSubmitting(false);
+        }
+      };
+
+      const handleSignOut = async () => {
+        setAuthError('');
+        try {
+          const { error } = await supabaseClient.auth.signOut();
+          if (error) {
+            console.error('Supabase sign out failed:', error.message);
+            setAuthError('ההתנתקות נכשלה. נסה שוב.');
+          }
+        } catch (error) {
+          console.error('Supabase sign out request failed:', error);
+          setAuthError('ההתנתקות נכשלה. נסה שוב.');
+        }
+      };
+
       const handleDayAnswer = (dayNum, answer) => {
         const currentStatus = monthLogs[dayNum];
         let updated = { ...monthLogs };
@@ -548,99 +739,8 @@
           }
         }
         setMonthLogs(updated);
-        localStorage.setItem(currentMonthKey, JSON.stringify(updated));
+        localStorage.setItem(accountStorageKey(currentMonthKey), JSON.stringify(updated));
         setShowDayModal(false);
-      };
-
-      const fetchAiAdvice = async () => {
-        if (!ollamaEnabled) {
-          setActiveTab('settings');
-          return;
-        }
-        setIsAiLoading(true);
-        setAiAdvice('');
-
-        const prompt = `אני נמצא בתהליך חיזוק אישי ובניית הרגלים באפליקציית "Remind".
-        ההבטחה שלי: "${profile.promise}".
-        הרצף שלי עומד על כ-${days} ימים.
-        תן לי חיזוק מנטלי קצר וממוקד בעברית (עד 3 משפטים).`;
-
-        try {
-          const response = await fetch(`http://localhost:11434/api/generate`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              model: "mistral",
-              prompt: prompt,
-              stream: false
-            })
-          });
-
-          if (!response.ok) {
-            console.error("Ollama error:", response.status);
-            setAiAdvice(`❌ שגיאה בחיבור ל-Ollama (Status: ${response.status}). וודא שהוא רץ בـTerminal!`);
-            return;
-          }
-
-          const data = await response.json();
-          if (data.response) {
-            setAiAdvice(data.response);
-          } else {
-            setAiAdvice("⚠️ תגובה לא ברורה מ-Ollama. נסה שוב!");
-          }
-        } catch (error) {
-          console.error("Ollama fetch error:", error);
-            setAiAdvice(`❌ לא ניתן להתחבר ל-Ollama בטקסט. וודא ש:
-1️⃣ Ollama מותקן (https://ollama.ai)
-2️⃣ Terminal פתוח עם: ollama serve
-3️⃣ הדגם Mistral הורד: ollama pull mistral`);
-        } finally {
-          setIsAiLoading(false);
-        }
-      };
-
-      // פונקציית שליחת מייל באמצעות EmailJS
-      const handleSendTestEmail = () => {
-        if (!profile.email) {
-          alert('אנא הזן כתובת מייל תקינה ושמור את ההגדרות תחילה.');
-          return;
-        }
-
-        const serviceID = 'service_h0qu6xd';   // החלף ב-Service ID שלך מ-EmailJS
-        const templateID = 'template_lp3daxo'; // החלף ב-Template ID שלך מ-EmailJS
-        const publicKey = '72l3V647Lulo45TKu';   // החלף ב-Public Key שלך מ-EmailJS
-
-        const templateParams = {
-          to_email: profile.email,
-          to_name: profile.name || 'משתמש Remind',
-          message: 'התחברות מוצלחת! מערכת Remind מחוברת כעת לג\'ימייל שלך ותשלח אלייך עדכונים.',
-        };
-
-        if (typeof emailjs === 'undefined') {
-          alert('ספריית EmailJS טרם נטענה. ודא חיבור לאינטרנט.');
-          return;
-        }
-
-        emailjs.send(serviceID, templateID, templateParams, publicKey)
-          .then((response) => {
-            alert('מייל בדיקה נשלח בהצלחה לתיבת הג\'ימייל שלך! 🚀');
-          })
-          .catch((err) => {
-            const status = Number(err?.status) || 0;
-            const details = typeof err?.text === 'string' ? err.text : '';
-            console.error('EmailJS send failed:', { status, details });
-
-            let explanation = details ? `\nפרטים מ-EmailJS: ${details}` : '';
-            if (status === 403) {
-              if (details.includes('non-browser environments')) {
-                explanation += '\nEmailJS חוסם בקשות מסביבה שאינה דפדפן. פתח את Remind דרך שרת מקומי או אתר HTTPS, ולא ישירות כקובץ file://.';
-              } else {
-                explanation += '\nEmailJS דחה את הבקשה. בדוק שהמפתחות נכונים ושהדומיין שממנו נפתח Remind מאושר בהגדרות האבטחה של EmailJS.';
-              }
-            }
-
-            alert(`שליחת המייל נכשלה${status ? ` (HTTP ${status})` : ''}.${explanation}`);
-          });
       };
 
       const startDrawing = (e) => {
@@ -684,15 +784,43 @@
         }
       };
 
-      const handleFinishOnboarding = () => {
+      const handleFinishOnboarding = async () => {
+        setOnboardingError('');
         const now = Date.now();
-        localStorage.setItem('eitan_registered', 'true');
-        localStorage.setItem('eitan_profile', JSON.stringify(profile));
-        if (!localStorage.getItem('eitan_streak_start')) {
-          localStorage.setItem('eitan_streak_start', now.toString());
-          setStartTime(now);
+        const updatedProfile = {
+          ...profile,
+          name: profile.name.trim(),
+          promise: profile.promise.trim(),
+          email: authUser.email || ''
+        };
+        try {
+          const { data, error } = await supabaseClient.auth.updateUser({
+            data: {
+              name: updatedProfile.name,
+              promise: updatedProfile.promise,
+              remind_registered: true
+            }
+          });
+
+          if (error) {
+            console.error('Supabase profile update failed:', error.message);
+            setOnboardingError('לא ניתן לשמור את הפרופיל כרגע. בדוק את החיבור ונסה שוב.');
+            return;
+          }
+
+          setProfile(updatedProfile);
+          setAuthUser(data.user);
+          localStorage.setItem(accountStorageKey('registered'), 'true');
+          localStorage.setItem(accountStorageKey('profile'), JSON.stringify(updatedProfile));
+          if (!localStorage.getItem(accountStorageKey('streak_start'))) {
+            localStorage.setItem(accountStorageKey('streak_start'), now.toString());
+            setStartTime(now);
+          }
+          setIsRegistered(true);
+        } catch (error) {
+          console.error('Supabase profile update request failed:', error);
+          setOnboardingError('לא ניתן לשמור את הפרופיל כרגע. בדוק את החיבור ונסה שוב.');
         }
-        setIsRegistered(true);
       };
 
       const handleConfirmReset = () => {
@@ -706,8 +834,8 @@
         const newStartTime = Date.now();
         setLogs(updatedLogs);
         setStartTime(newStartTime);
-        localStorage.setItem('eitan_logs', JSON.stringify(updatedLogs));
-        localStorage.setItem('eitan_streak_start', newStartTime.toString());
+        localStorage.setItem(accountStorageKey('logs'), JSON.stringify(updatedLogs));
+        localStorage.setItem(accountStorageKey('streak_start'), newStartTime.toString());
         setResetReason('');
         setShowResetModal(false);
       };
@@ -724,6 +852,98 @@
       const startDayOfWeek = (selectedWeek - 1) * 7 + 1;
       const daysInCurrentWeek = Array.from({ length: 7 }, (_, i) => startDayOfWeek + i).filter(d => d <= 31);
 
+      if (authLoading || (authUser && !userDataReady)) {
+        return (
+          <div className={`onboarding-shell min-h-screen flex items-center justify-center p-4 ${currentTheme}`} dir="rtl">
+            <div className="apple-card p-6 text-center">טוען את Remind...</div>
+          </div>
+        );
+      }
+
+      if (!authUser) {
+        return (
+          <div className={`onboarding-shell min-h-screen flex items-center justify-center p-4 ${currentTheme}`} dir="rtl">
+            <div className="onboarding-card apple-card p-6 sm:p-8 max-w-lg w-full space-y-6 shadow-2xl">
+              <div className="text-center space-y-3 flex flex-col items-center">
+                <RemindLogo size="lg" />
+                <h1 className="text-2xl font-bold pt-2">ברוכים הבאים ל־Remind</h1>
+                <p className="text-sm opacity-70">התחברות מאובטחת באמצעות קישור למייל</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => { setAuthMode('signup'); setAuthError(''); setAuthFeedback(''); }}
+                  className={`min-h-11 rounded-xl border px-3 py-2 font-medium ${authMode === 'signup' ? 'border-blue-500 bg-blue-500/10' : 'border-[var(--card-border)]'}`}
+                >
+                  הרשמה
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setAuthMode('login'); setAuthError(''); setAuthFeedback(''); }}
+                  className={`min-h-11 rounded-xl border px-3 py-2 font-medium ${authMode === 'login' ? 'border-blue-500 bg-blue-500/10' : 'border-[var(--card-border)]'}`}
+                >
+                  כבר יש לי חשבון
+                </button>
+              </div>
+
+              <form onSubmit={handleEmailAuth} className="space-y-4">
+                {authMode === 'signup' && (
+                  <>
+                    <div>
+                      <label className="text-sm opacity-80 block mb-1">שם מלא או כינוי</label>
+                      <input
+                        type="text"
+                        autoComplete="name"
+                        required
+                        value={signupName}
+                        onChange={(event) => setSignupName(event.target.value)}
+                        placeholder="איך לקרוא לך?"
+                        className="w-full min-h-11 bg-[var(--input-bg)] border border-[var(--card-border)] rounded-xl px-4 py-3 text-base focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm opacity-80 block mb-1">ההבטחה שלי לעצמי</label>
+                      <textarea
+                        required
+                        value={signupPromise}
+                        onChange={(event) => setSignupPromise(event.target.value)}
+                        placeholder="אני מתחייב/ת לעצמי..."
+                        className="w-full min-h-24 bg-[var(--input-bg)] border border-[var(--card-border)] rounded-xl p-4 text-base resize-y focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+                  </>
+                )}
+                <div>
+                  <label className="text-sm opacity-80 block mb-1">כתובת אימייל</label>
+                  <input
+                    type="email"
+                    autoComplete="email"
+                    inputMode="email"
+                    required
+                    value={authEmail}
+                    onChange={(event) => setAuthEmail(event.target.value)}
+                    placeholder="name@example.com"
+                    className="w-full min-h-11 bg-[var(--input-bg)] border border-[var(--card-border)] rounded-xl px-4 py-3 text-base focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                {authError && <p role="alert" className="text-sm text-red-500">{authError}</p>}
+                {authFeedback && <p role="status" className="text-sm text-emerald-600">{authFeedback}</p>}
+
+                <button
+                  type="submit"
+                  disabled={authSubmitting}
+                  className="w-full min-h-12 py-3.5 rounded-xl bg-[#007aff] hover:bg-[#0063cc] disabled:opacity-50 text-white font-medium text-base transition-all shadow-lg shadow-blue-500/20 active:scale-95"
+                >
+                  {authSubmitting ? 'שולח...' : 'שלחו לי קישור למייל'}
+                </button>
+              </form>
+            </div>
+          </div>
+        );
+      }
+
       if (!isRegistered) {
         return (
           <div className={`onboarding-shell min-h-screen flex items-center justify-center p-4 ${currentTheme}`} dir="rtl">
@@ -732,61 +952,57 @@
                 <div className="space-y-6">
                   <div className="text-center space-y-3 flex flex-col items-center">
                     <RemindLogo size="lg" />
-                    <h1 className="text-2xl font-bold pt-2">ברוכים הבאים ל־Remind</h1>
-                    <p className="text-xs opacity-70">Remind</p>
+                    <h1 className="text-2xl font-bold pt-2">פרטי ההרשמה</h1>
+                    <p className="text-sm opacity-70">{authUser.email}</p>
                   </div>
                   <div className="space-y-4">
                     <div>
-                      <label className="text-xs opacity-70 block mb-1">שם מלא או כינוי</label>
+                      <label className="text-sm opacity-70 block mb-1">שם מלא או כינוי</label>
                       <input
                         type="text"
                         value={profile.name}
+                        readOnly={Boolean(authUser.user_metadata?.name)}
                         onChange={(e) => setProfile({...profile, name: e.target.value})}
                         placeholder="הכנס את שמך..."
-                        className="w-full bg-[var(--input-bg)] border border-[var(--card-border)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-all"
+                        className="w-full bg-[var(--input-bg)] border border-[var(--card-border)] rounded-xl px-4 py-3 text-base focus:outline-none focus:border-blue-500 transition-all"
                       />
                     </div>
                     <div>
-                      <label className="text-xs opacity-70 block mb-1">קוד גישה (PIN)</label>
-                      <input
-                        type="password"
-                        maxLength={4}
-                        value={tempPassword}
-                        onChange={(e) => setTempPassword(e.target.value)}
-                        placeholder="••••"
-                        className="w-full bg-[var(--input-bg)] border border-[var(--card-border)] rounded-xl px-4 py-3 text-center text-lg tracking-widest focus:outline-none focus:border-blue-500"
+                      <label className="text-sm opacity-70 block mb-1">ההבטחה שלי לעצמי</label>
+                      <textarea
+                        value={profile.promise}
+                        readOnly={Boolean(authUser.user_metadata?.promise)}
+                        onChange={(e) => setProfile({...profile, promise: e.target.value})}
+                        placeholder="אני מתחייב/ת לעצמי..."
+                        className="w-full min-h-24 bg-[var(--input-bg)] border border-[var(--card-border)] rounded-xl p-4 text-base resize-y focus:outline-none focus:border-blue-500"
                       />
                     </div>
                   </div>
                   <button
-                    disabled={!profile.name.trim() || tempPassword.length < 4}
+                    disabled={!profile.name.trim() || !profile.promise.trim()}
                     onClick={() => setOnboardingStep(2)}
-                    className="w-full py-3.5 rounded-xl bg-[#007aff] hover:bg-[#0063cc] disabled:opacity-50 text-white font-medium text-sm transition-all shadow-lg shadow-blue-500/20 active:scale-95"
+                    className="w-full py-3.5 rounded-xl bg-[#007aff] hover:bg-[#0063cc] disabled:opacity-50 text-white font-medium text-base transition-all shadow-lg shadow-blue-500/20 active:scale-95"
                   >
-                    המשך
+                    המשך לחתימה
                   </button>
                 </div>
               )}
 
               {onboardingStep === 2 && (
                 <div className="space-y-5">
-                  <h2 className="text-xl font-bold text-center">ההבטחה שלי לעצמי</h2>
-                  <textarea
-                    value={profile.promise}
-                    onChange={(e) => setProfile({...profile, promise: e.target.value})}
-                    placeholder="אני מתחייב לעצמי לשמור על פוקוס..."
-                    className="w-full bg-[var(--input-bg)] border border-[var(--card-border)] rounded-xl p-4 text-xs resize-none h-24 focus:outline-none focus:border-blue-500"
-                  />
+                  <h2 className="text-xl font-bold text-center">חתימה דיגיטלית</h2>
+                  <p className="text-sm opacity-70 text-center">{profile.name}, אשר/י את תחילת הדרך שלך ב־Remind.</p>
                   <div>
-                    <label className="text-xs opacity-70 block mb-1">חתימה דיגיטלית</label>
+                    <label className="text-sm opacity-70 block mb-1">חתימה</label>
                     <div className="bg-[var(--input-bg)] border border-[var(--card-border)] rounded-xl overflow-hidden relative touch-none">
                       <canvas ref={canvasRef} width={400} height={110} onMouseDown={startDrawing} onMouseMove={draw} onMouseUp={stopDrawing} onTouchStart={startDrawing} onTouchMove={draw} onTouchEnd={stopDrawing} onTouchCancel={stopDrawing} className="w-full h-[110px] cursor-crosshair" />
                     </div>
                   </div>
+                  {onboardingError && <p role="alert" className="text-sm text-red-500">{onboardingError}</p>}
                   <button
-                    disabled={!profile.promise.trim() || !hasSigned}
+                    disabled={!hasSigned}
                     onClick={handleFinishOnboarding}
-                    className="w-full py-3.5 rounded-xl bg-[#007aff] hover:bg-[#0063cc] text-white font-medium text-sm disabled:opacity-50 transition-all shadow-lg shadow-blue-500/20 active:scale-95"
+                    className="w-full py-3.5 rounded-xl bg-[#007aff] hover:bg-[#0063cc] text-white font-medium text-base disabled:opacity-50 transition-all shadow-lg shadow-blue-500/20 active:scale-95"
                   >
                     סיום וכניסה לאפליקציה
                   </button>
@@ -833,18 +1049,6 @@
                   </div>
                 </div>
 
-                <div className="apple-card p-6 space-y-4">
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-2">
-                      <span className="material-symbols-rounded text-blue-500">smart_toy</span>
-                      <h3 className="text-sm font-bold">היועץ והמאמן האישי (Ollama Local)</h3>
-                    </div>
-                    <button onClick={fetchAiAdvice} disabled={isAiLoading} className="px-4 py-2 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-500 font-medium text-xs transition-all active:scale-95">
-                      {isAiLoading ? 'חושב...' : 'קבל חיזוק מנטלי'}
-                    </button>
-                  </div>
-                  {aiAdvice && <div className="p-4 rounded-2xl bg-[var(--input-bg)] border border-[var(--card-border)] text-xs opacity-90 leading-relaxed">"{aiAdvice}"</div>}
-                </div>
               </div>
             )}
 
@@ -930,7 +1134,7 @@
 
             {/* --- מסך 3: הגדרות --- */}
             {activeTab === 'settings' && (
-              <div className="apple-card p-6 space-y-6 text-xs">
+              <div className="settings-panel apple-card p-6 space-y-6 text-xs">
                 <h3 className="text-lg font-bold flex items-center gap-2">
                   <span className="material-symbols-rounded text-blue-500">settings</span> הגדרות מערכת ועיצוב
                 </h3>
@@ -938,88 +1142,40 @@
                 <div>
                   <label className="opacity-70 block mb-2 font-medium">מצב תצוגה (אוטומטי / ידני)</label>
                   <div className="settings-theme-options grid grid-cols-3 gap-3">
-                    <button onClick={() => { setThemeMode('auto'); localStorage.setItem('eitan_theme_mode', 'auto'); }} className={`p-3 rounded-xl border text-center transition-all ${themeMode === 'auto' ? 'border-blue-500 bg-blue-500/10 font-bold' : 'border-[var(--card-border)]'}`}>
+                    <button onClick={() => { setThemeMode('auto'); localStorage.setItem(accountStorageKey('theme_mode'), 'auto'); }} className={`p-3 rounded-xl border text-center transition-all ${themeMode === 'auto' ? 'border-blue-500 bg-blue-500/10 font-bold' : 'border-[var(--card-border)]'}`}>
                       אוטומטי (לפי שעה)
                     </button>
-                    <button onClick={() => { setThemeMode('light'); localStorage.setItem('eitan_theme_mode', 'light'); }} className={`p-3 rounded-xl border text-center transition-all ${themeMode === 'light' ? 'border-blue-500 bg-blue-500/10 font-bold' : 'border-[var(--card-border)]'}`}>
+                    <button onClick={() => { setThemeMode('light'); localStorage.setItem(accountStorageKey('theme_mode'), 'light'); }} className={`p-3 rounded-xl border text-center transition-all ${themeMode === 'light' ? 'border-blue-500 bg-blue-500/10 font-bold' : 'border-[var(--card-border)]'}`}>
                       מצב בהיר
                     </button>
-                    <button onClick={() => { setThemeMode('dark'); localStorage.setItem('eitan_theme_mode', 'dark'); }} className={`p-3 rounded-xl border text-center transition-all ${themeMode === 'dark' ? 'border-blue-500 bg-blue-500/10 font-bold' : 'border-[var(--card-border)]'}`}>
+                    <button onClick={() => { setThemeMode('dark'); localStorage.setItem(accountStorageKey('theme_mode'), 'dark'); }} className={`p-3 rounded-xl border text-center transition-all ${themeMode === 'dark' ? 'border-blue-500 bg-blue-500/10 font-bold' : 'border-[var(--card-border)]'}`}>
                       מצב כהה
                     </button>
                   </div>
                 </div>
 
-                {/* --- אזור חיבור מייל (EmailJS) --- */}
                 <div className="p-4 rounded-2xl bg-[var(--input-bg)] border border-[var(--card-border)] space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="material-symbols-rounded text-blue-500">mail</span>
-                      <span className="font-bold text-sm">בדיקת שליחת מייל (EmailJS)</span>
-                    </div>
-                    <span className="text-[10px] bg-emerald-500/10 text-emerald-500 px-2 py-0.5 rounded-full font-bold">שליחת בדיקה</span>
+                  <div>
+                    <label className="opacity-70 block mb-1">חשבון מחובר</label>
+                    <p className="text-sm font-medium break-all">{authUser.email}</p>
                   </div>
-                  <p className="opacity-70 leading-relaxed">
-                    הזן כתובת מייל כדי לשלוח אליה מייל בדיקה דרך EmailJS.
-                  </p>
-                  <div className="flex gap-2 pt-1">
-                    <input
-                      type="email"
-                      placeholder="your.email@gmail.com"
-                      value={profile.email || ''}
-                      onChange={(e) => setProfile({...profile, email: e.target.value})}
-                      className="flex-1 bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-blue-500"
-                    />
-                    <button
-                      onClick={handleSendTestEmail}
-                      className="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-zinc-950 font-bold transition-all shadow-md active:scale-95 whitespace-nowrap"
-                    >
-                      שלח מייל בדיקה ✉️
-                    </button>
-                  </div>
+                  {authError && <p role="alert" className="text-sm text-red-500">{authError}</p>}
+                  <button
+                    onClick={handleSignOut}
+                    className="w-full min-h-11 px-4 py-2.5 rounded-xl border border-rose-500/30 text-rose-600 font-medium transition-all active:scale-95"
+                  >
+                    התנתקות וחזרה למסך הכניסה
+                  </button>
                 </div>
 
                 <div>
-                  <label className="opacity-70 block mb-1">שם מלא</label>
-                  <input type="text" value={profile.name} onChange={(e) => setProfile({...profile, name: e.target.value})} className="w-full bg-[var(--input-bg)] border border-[var(--card-border)] rounded-xl px-3 py-2.5 text-sm" />
+                  <label className="opacity-70 block mb-1">שם מלא (נקבע בהרשמה)</label>
+                  <input type="text" value={profile.name} readOnly className="w-full bg-[var(--input-bg)] border border-[var(--card-border)] rounded-xl px-3 py-2.5 text-sm opacity-80" />
                 </div>
                 <div>
-                  <label className="opacity-70 block mb-1">ההבטחה שלי</label>
-                  <textarea value={profile.promise} onChange={(e) => setProfile({...profile, promise: e.target.value})} className="w-full bg-[var(--input-bg)] border border-[var(--card-border)] rounded-xl p-3 text-xs h-16 resize-none" />
+                  <label className="opacity-70 block mb-1">ההבטחה שלי (נקבעה בהרשמה)</label>
+                  <textarea value={profile.promise} readOnly className="w-full bg-[var(--input-bg)] border border-[var(--card-border)] rounded-xl p-3 text-xs h-16 resize-none opacity-80" />
                 </div>
-                <div>
-                  <label className="opacity-70 block mb-1">⚙️ Ollama - AI מקומי (חינמי לגמרי!)</label>
-                  <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4 text-xs text-green-300 mb-4 space-y-3">
-                    <p className="font-bold text-sm">📋 הוראות התקנה וסט-אפ:</p>
-                    <div className="space-y-2 text-green-200">
-                      <p>✓ <strong>שלב 1:</strong> הורדה מ-<code className="text-blue-300">https://ollama.ai</code></p>
-                      <p>✓ <strong>שלב 2:</strong> התקנה ב-Applications</p>
-                      <p>✓ <strong>שלב 3:</strong> פתיחת Terminal והקלד:</p>
-                      <code className="block bg-black/50 p-2 rounded my-1">ollama pull mistral</code>
-                      <p>✓ <strong>שלב 4:</strong> הפעלת Ollama:</p>
-                      <code className="block bg-black/50 p-2 rounded my-1">ollama serve</code>
-                      <p className="pt-3 border-t border-green-500/30 mt-3">🎯 <strong>בדיקה:</strong> כשתראה בـTerminal "Listening on 127.0.0.1:11434" - זה אומר Ollama רץ!</p>
-                    </div>
-                  </div>
-                  <button onClick={async () => { 
-                    try {
-                      const response = await fetch('http://localhost:11434/api/tags');
-                      if (response.ok) {
-                        localStorage.setItem('eitan_ollama_enabled', 'true');
-                        alert('✅ בדיקה עברה! Ollama רץ ופועל!\n\nעכשיו תוכל להשתמש בחיזוק AI! 🚀');
-                      } else {
-                        alert('❌ Ollama לא משיב כראוי.');
-                      }
-                    } catch (err) {
-                      alert('❌ לא ניתן להתחבר ל-Ollama!\n\nוודא ש:\n1️⃣ Terminal פתוח עם: ollama serve\n2️⃣ תראה: "Listening on 127.0.0.1:11434"');
-                    }
-                  }} className="w-full py-3 px-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl font-bold text-sm transition-all shadow-lg shadow-green-500/20 active:scale-95">
-                    ✅ בדוק שOllama רץ וקבל אישור 🔥
-                  </button>
-                </div>
-                <button onClick={() => { localStorage.setItem('eitan_profile', JSON.stringify(profile)); alert('ההגדרות נשמרו בהצלחה!'); }} className="py-3 px-6 rounded-xl bg-[#007aff] text-white font-medium shadow-lg shadow-blue-500/20 active:scale-95 transition-all">
-                  שמור שינויים
-                </button>
               </div>
             )}
 
