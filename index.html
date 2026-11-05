@@ -673,6 +673,12 @@
         setAuthError('');
         setAuthFeedback('');
 
+        const getEmailAuthErrorMessage = (error) => (
+          Number(error?.status) === 429
+            ? 'Supabase הגביל זמנית שליחת מיילים (429). המתן לפחות דקה לפני ניסיון נוסף. בשליחה דרך שרת המיילים המובנה קיימת גם מגבלה של עד 2 מיילים בשעה; לשליחה למשתמשים אחרים צריך להגדיר SMTP חיצוני ב-Supabase.'
+            : 'לא הצלחנו לשלוח קישור למייל. בדוק את הכתובת והגדרות האימייל ב-Supabase ונסה שוב.'
+        );
+
         const email = authEmail.trim().toLowerCase();
         if (!email || (authMode === 'signup' && (!signupName.trim() || !signupPromise.trim()))) {
           setAuthError('יש למלא את כל הפרטים לפני השליחה.');
@@ -699,14 +705,14 @@
 
           if (error) {
             console.error('Supabase email authentication failed:', error.message);
-            setAuthError('לא הצלחנו לשלוח קישור למייל. בדוק את הכתובת ונסה שוב.');
+            setAuthError(getEmailAuthErrorMessage(error));
             return;
           }
 
           setAuthFeedback('שלחנו לך קישור התחברות למייל. פתח אותו באותו מכשיר כדי להיכנס.');
         } catch (error) {
           console.error('Supabase email request failed:', error);
-          setAuthError('לא הצלחנו לשלוח קישור למייל. בדוק את הכתובת ונסה שוב.');
+          setAuthError(getEmailAuthErrorMessage(error));
         } finally {
           setAuthSubmitting(false);
         }
