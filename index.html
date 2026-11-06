@@ -609,7 +609,7 @@
         }
 
         setProfile({
-          name: metadata.name || localProfile.name || '',
+          name: metadata.name || metadata.full_name || metadata.preferred_username || localProfile.name || '',
           age: localProfile.age || '',
           gender: localProfile.gender || 'זכר',
           promise: metadata.promise || localProfile.promise || '',
@@ -714,6 +714,31 @@
           console.error('Supabase email request failed:', error);
           setAuthError(getEmailAuthErrorMessage(error));
         } finally {
+          setAuthSubmitting(false);
+        }
+      };
+
+      const handleGoogleLogin = async () => {
+        setAuthError('');
+        setAuthFeedback('');
+        setAuthSubmitting(true);
+
+        try {
+          const { error } = await supabaseClient.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+              redirectTo: `${window.location.origin}${window.location.pathname}`
+            }
+          });
+
+          if (error) {
+            console.error('Google sign-in failed:', error.message);
+            setAuthError('לא הצלחנו להתחבר עם Google. בדוק שספק Google מופעל בהגדרות Supabase.');
+            setAuthSubmitting(false);
+          }
+        } catch (error) {
+          console.error('Google sign-in request failed:', error);
+          setAuthError('לא הצלחנו להתחבר עם Google. נסה שוב.');
           setAuthSubmitting(false);
         }
       };
@@ -945,6 +970,27 @@
                   {authSubmitting ? 'שולח...' : 'שלחו לי קישור למייל'}
                 </button>
               </form>
+
+              <div className="flex items-center gap-3 text-xs opacity-60" aria-hidden="true">
+                <span className="h-px flex-1 bg-[var(--card-border)]"></span>
+                <span>או</span>
+                <span className="h-px flex-1 bg-[var(--card-border)]"></span>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleGoogleLogin}
+                disabled={authSubmitting}
+                className="google-login-button w-full min-h-12 flex items-center justify-center gap-3 rounded-xl border border-[var(--card-border)] bg-white px-4 py-3 text-sm font-medium text-[#3c4043] transition-colors hover:bg-[#f8f9fa] disabled:opacity-50"
+              >
+                <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+                  <path fill="#4285F4" d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 0 1-4.087 5.571l6.568 5.105C41.594 34.417 44 29.637 44 24c0-1.341-.138-2.65-.389-3.917Z" />
+                  <path fill="#34A853" d="M24 44c5.4 0 9.93-1.79 13.24-4.85l-6.568-5.105C28.885 35.467 26.611 36 24 36c-5.202 0-9.61-3.51-11.19-8.23l-6.66 5.16C9.41 39.16 16.115 44 24 44Z" />
+                  <path fill="#FBBC05" d="M12.81 27.77A12.03 12.03 0 0 1 12 24c0-1.31.22-2.58.62-3.77l-6.66-5.16A19.93 19.93 0 0 0 4 24c0 3.22.77 6.26 2.13 8.93l6.68-5.16Z" />
+                  <path fill="#EA4335" d="M24 12c2.94 0 5.58 1.01 7.66 3.01l5.76-5.76C33.92 5.73 29.3 4 24 4 16.115 4 9.41 8.84 5.96 15.07l6.66 5.16C14.19 15.51 18.798 12 24 12Z" />
+                </svg>
+                {authSubmitting ? 'מתחבר...' : 'המשך עם Google'}
+              </button>
             </div>
           </div>
         );
