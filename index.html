@@ -89,6 +89,150 @@
       color: var(--text-main);
     }
 
+    .google-auth-container {
+      position: relative;
+      z-index: 1;
+      width: min(100%, 380px);
+      padding: 40px 32px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      border-radius: 28px;
+      text-align: center;
+      background: rgba(255, 255, 255, 0.86);
+      box-shadow: 0 28px 80px rgba(28, 38, 65, 0.16), 0 4px 14px rgba(28, 38, 65, 0.06);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      animation: authCardEnter 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    }
+
+    .google-auth-container::before {
+      position: absolute;
+      top: 0;
+      right: 0;
+      left: 0;
+      height: 5px;
+      background: linear-gradient(90deg, #20b7d9, #20e3a2, #20b7d9);
+      content: "";
+    }
+
+    .google-auth-screen {
+      position: relative;
+      isolation: isolate;
+      overflow: hidden;
+      background:
+        radial-gradient(ellipse at 18% 18%, rgba(32, 227, 162, 0.15), transparent 34%),
+        radial-gradient(ellipse at 82% 82%, rgba(32, 183, 217, 0.14), transparent 38%),
+        linear-gradient(145deg, #f8fafc, #edf2f7);
+    }
+
+    .google-auth-screen::before,
+    .google-auth-screen::after {
+      position: absolute;
+      z-index: -1;
+      width: 220px;
+      height: 220px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, rgba(32, 227, 162, 0.18), rgba(32, 183, 217, 0.08));
+      filter: blur(2px);
+      content: "";
+    }
+
+    .google-auth-screen::before {
+      top: 8%;
+      left: -90px;
+    }
+
+    .google-auth-screen::after {
+      right: -100px;
+      bottom: 8%;
+      width: 280px;
+      height: 280px;
+    }
+
+    .google-auth-logo {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 30px;
+    }
+
+    .google-auth-heading {
+      margin: 0 0 10px;
+      color: #17212b;
+      font-size: clamp(1.55rem, 5vw, 1.85rem);
+      font-weight: 750;
+      letter-spacing: -0.04em;
+    }
+
+    .google-auth-caption {
+      margin: 0 0 28px;
+      color: #687581;
+      font-size: 0.95rem;
+      line-height: 1.7;
+    }
+
+    .google-auth-note {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      margin-top: 20px;
+      color: #7b8791;
+      font-size: 0.75rem;
+    }
+
+    .google-auth-note .material-symbols-rounded {
+      font-size: 16px;
+      color: #14a985;
+    }
+
+    .google-login-button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      width: 100%;
+      padding: 12px 16px;
+      background-color: #ffffff;
+      color: #3c4043;
+      border: 1px solid #dfe4e8;
+      border-radius: 14px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 3px 8px rgba(34, 48, 62, 0.05);
+      transition: background-color 0.2s, box-shadow 0.2s, transform 0.2s, border-color 0.2s;
+    }
+
+    .google-login-button:hover {
+      background-color: #f8f9fa;
+      border-color: #d2e3fc;
+      box-shadow: 0 8px 20px rgba(34, 48, 62, 0.1);
+      transform: translateY(-1px);
+    }
+
+    .google-login-button:disabled {
+      cursor: wait;
+    }
+
+    .google-login-button:focus-visible {
+      outline: 3px solid rgba(0, 122, 255, 0.35);
+      outline-offset: 3px;
+    }
+
+    @keyframes authCardEnter {
+      from { opacity: 0; transform: translateY(14px) scale(0.985); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    @media (max-width: 420px) {
+      .google-auth-container {
+        padding: 36px 24px 28px;
+        border-radius: 24px;
+      }
+
+      .google-auth-logo { margin-bottom: 24px; }
+    }
+
     body {
       background-color: var(--bg-color);
       color: var(--text-main);
@@ -418,7 +562,7 @@
 
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
-    const supabaseClient = window.supabase.createClient(
+    const supabase = window.supabase.createClient(
       'https://lguuxrwjwwzxkhydjryo.supabase.co',
       'sb_publishable_mOtrogkoIlfugUNztuFyYA_yN7T-av8'
     );
@@ -464,11 +608,6 @@
       const [authUser, setAuthUser] = useState(null);
       const [authLoading, setAuthLoading] = useState(true);
       const [userDataReady, setUserDataReady] = useState(false);
-      const [authMode, setAuthMode] = useState('signup');
-      const [authEmail, setAuthEmail] = useState('');
-      const [signupName, setSignupName] = useState('');
-      const [signupPromise, setSignupPromise] = useState('');
-      const [authFeedback, setAuthFeedback] = useState('');
       const [authError, setAuthError] = useState('');
       const [authSubmitting, setAuthSubmitting] = useState(false);
       const [isRegistered, setIsRegistered] = useState(false);
@@ -538,7 +677,7 @@
 
       useEffect(() => {
         let isMounted = true;
-        const { data: { subscription } } = supabaseClient.auth.onAuthStateChange((_event, session) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
           if (isMounted) {
             const nextUser = session?.user || null;
             const nextUserId = nextUser?.id || null;
@@ -551,7 +690,7 @@
           }
         });
 
-        supabaseClient.auth.getSession()
+        supabase.auth.getSession()
           .then(({ data, error }) => {
             if (!isMounted) return;
             if (error) {
@@ -668,66 +807,15 @@
       const seconds = elapsedSeconds % 60;
       const circleProgress = (seconds / 60) * 100;
 
-      const handleEmailAuth = async (event) => {
-        event.preventDefault();
-        setAuthError('');
-        setAuthFeedback('');
-
-        const getEmailAuthErrorMessage = (error) => (
-          Number(error?.status) === 429
-            ? 'Supabase הגביל זמנית שליחת מיילים (429). המתן לפחות דקה לפני ניסיון נוסף. בשליחה דרך שרת המיילים המובנה קיימת גם מגבלה של עד 2 מיילים בשעה; לשליחה למשתמשים אחרים צריך להגדיר SMTP חיצוני ב-Supabase.'
-            : 'לא הצלחנו לשלוח קישור למייל. בדוק את הכתובת והגדרות האימייל ב-Supabase ונסה שוב.'
-        );
-
-        const email = authEmail.trim().toLowerCase();
-        if (!email || (authMode === 'signup' && (!signupName.trim() || !signupPromise.trim()))) {
-          setAuthError('יש למלא את כל הפרטים לפני השליחה.');
-          return;
-        }
-
-        setAuthSubmitting(true);
-        const redirectTo = `${window.location.origin}${window.location.pathname}`;
-        try {
-          const { error } = await supabaseClient.auth.signInWithOtp({
-            email,
-            options: {
-              emailRedirectTo: redirectTo,
-              shouldCreateUser: authMode === 'signup',
-              ...(authMode === 'signup' ? {
-                data: {
-                  name: signupName.trim(),
-                  promise: signupPromise.trim(),
-                  remind_registered: false
-                }
-              } : {})
-            }
-          });
-
-          if (error) {
-            console.error('Supabase email authentication failed:', error.message);
-            setAuthError(getEmailAuthErrorMessage(error));
-            return;
-          }
-
-          setAuthFeedback('שלחנו לך קישור התחברות למייל. פתח אותו באותו מכשיר כדי להיכנס.');
-        } catch (error) {
-          console.error('Supabase email request failed:', error);
-          setAuthError(getEmailAuthErrorMessage(error));
-        } finally {
-          setAuthSubmitting(false);
-        }
-      };
-
       const handleGoogleLogin = async () => {
         setAuthError('');
-        setAuthFeedback('');
         setAuthSubmitting(true);
 
         try {
-          const { error } = await supabaseClient.auth.signInWithOAuth({
+          const { error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
-              redirectTo: `${window.location.origin}${window.location.pathname}`
+              redirectTo: 'https://remind-bay.vercel.app/'
             }
           });
 
@@ -746,7 +834,7 @@
       const handleSignOut = async () => {
         setAuthError('');
         try {
-          const { error } = await supabaseClient.auth.signOut();
+          const { error } = await supabase.auth.signOut();
           if (error) {
             console.error('Supabase sign out failed:', error.message);
             setAuthError('ההתנתקות נכשלה. נסה שוב.');
@@ -825,7 +913,7 @@
           email: authUser.email || ''
         };
         try {
-          const { data, error } = await supabaseClient.auth.updateUser({
+          const { data, error } = await supabase.auth.updateUser({
             data: {
               name: updatedProfile.name,
               promise: updatedProfile.promise,
@@ -893,104 +981,32 @@
 
       if (!authUser) {
         return (
-          <div className={`onboarding-shell min-h-screen flex items-center justify-center p-4 ${currentTheme}`} dir="rtl">
-            <div className="onboarding-card apple-card p-6 sm:p-8 max-w-lg w-full space-y-6 shadow-2xl">
-              <div className="text-center space-y-3 flex flex-col items-center">
+          <div className={`google-auth-screen onboarding-shell min-h-screen flex items-center justify-center p-4 ${currentTheme}`} dir="rtl">
+            <div className="google-auth-container apple-card shadow-2xl">
+              <div className="google-auth-logo">
                 <RemindLogo size="lg" />
-                <h1 className="text-2xl font-bold pt-2">ברוכים הבאים ל־Remind</h1>
-                <p className="text-sm opacity-70">התחברות מאובטחת באמצעות קישור למייל</p>
               </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => { setAuthMode('signup'); setAuthError(''); setAuthFeedback(''); }}
-                  className={`min-h-11 rounded-xl border px-3 py-2 font-medium ${authMode === 'signup' ? 'border-blue-500 bg-blue-500/10' : 'border-[var(--card-border)]'}`}
-                >
-                  הרשמה
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setAuthMode('login'); setAuthError(''); setAuthFeedback(''); }}
-                  className={`min-h-11 rounded-xl border px-3 py-2 font-medium ${authMode === 'login' ? 'border-blue-500 bg-blue-500/10' : 'border-[var(--card-border)]'}`}
-                >
-                  כבר יש לי חשבון
-                </button>
-              </div>
-
-              <form onSubmit={handleEmailAuth} className="space-y-4">
-                {authMode === 'signup' && (
-                  <>
-                    <div>
-                      <label className="text-sm opacity-80 block mb-1">שם מלא או כינוי</label>
-                      <input
-                        type="text"
-                        autoComplete="name"
-                        required
-                        value={signupName}
-                        onChange={(event) => setSignupName(event.target.value)}
-                        placeholder="איך לקרוא לך?"
-                        className="w-full min-h-11 bg-[var(--input-bg)] border border-[var(--card-border)] rounded-xl px-4 py-3 text-base focus:outline-none focus:border-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm opacity-80 block mb-1">ההבטחה שלי לעצמי</label>
-                      <textarea
-                        required
-                        value={signupPromise}
-                        onChange={(event) => setSignupPromise(event.target.value)}
-                        placeholder="אני מתחייב/ת לעצמי..."
-                        className="w-full min-h-24 bg-[var(--input-bg)] border border-[var(--card-border)] rounded-xl p-4 text-base resize-y focus:outline-none focus:border-blue-500"
-                      />
-                    </div>
-                  </>
-                )}
-                <div>
-                  <label className="text-sm opacity-80 block mb-1">כתובת אימייל</label>
-                  <input
-                    type="email"
-                    autoComplete="email"
-                    inputMode="email"
-                    required
-                    value={authEmail}
-                    onChange={(event) => setAuthEmail(event.target.value)}
-                    placeholder="name@example.com"
-                    className="w-full min-h-11 bg-[var(--input-bg)] border border-[var(--card-border)] rounded-xl px-4 py-3 text-base focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-
-                {authError && <p role="alert" className="text-sm text-red-500">{authError}</p>}
-                {authFeedback && <p role="status" className="text-sm text-emerald-600">{authFeedback}</p>}
-
-                <button
-                  type="submit"
-                  disabled={authSubmitting}
-                  className="w-full min-h-12 py-3.5 rounded-xl bg-[#007aff] hover:bg-[#0063cc] disabled:opacity-50 text-white font-medium text-base transition-all shadow-lg shadow-blue-500/20 active:scale-95"
-                >
-                  {authSubmitting ? 'שולח...' : 'שלחו לי קישור למייל'}
-                </button>
-              </form>
-
-              <div className="flex items-center gap-3 text-xs opacity-60" aria-hidden="true">
-                <span className="h-px flex-1 bg-[var(--card-border)]"></span>
-                <span>או</span>
-                <span className="h-px flex-1 bg-[var(--card-border)]"></span>
-              </div>
-
+              <h1 className="google-auth-heading">ברוכים הבאים ל־Remind</h1>
+              <p className="google-auth-caption">מרחב אישי לבניית חוסן והרגלים.<br />התחברו והמשיכו בדרך שלכם.</p>
+              {authError && <p role="alert" className="text-sm text-red-500">{authError}</p>}
               <button
                 type="button"
                 onClick={handleGoogleLogin}
                 disabled={authSubmitting}
-                className="google-login-button w-full min-h-12 flex items-center justify-center gap-3 rounded-xl border border-[var(--card-border)] bg-white px-4 py-3 text-sm font-medium text-[#3c4043] transition-colors hover:bg-[#f8f9fa] disabled:opacity-50"
+                className="google-login-button min-h-12 disabled:opacity-50"
               >
-                <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
-                  <path fill="#4285F4" d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 0 1-4.087 5.571l6.568 5.105C41.594 34.417 44 29.637 44 24c0-1.341-.138-2.65-.389-3.917Z" />
-                  <path fill="#34A853" d="M24 44c5.4 0 9.93-1.79 13.24-4.85l-6.568-5.105C28.885 35.467 26.611 36 24 36c-5.202 0-9.61-3.51-11.19-8.23l-6.66 5.16C9.41 39.16 16.115 44 24 44Z" />
-                  <path fill="#FBBC05" d="M12.81 27.77A12.03 12.03 0 0 1 12 24c0-1.31.22-2.58.62-3.77l-6.66-5.16A19.93 19.93 0 0 0 4 24c0 3.22.77 6.26 2.13 8.93l6.68-5.16Z" />
-                  <path fill="#EA4335" d="M24 12c2.94 0 5.58 1.01 7.66 3.01l5.76-5.76C33.92 5.73 29.3 4 24 4 16.115 4 9.41 8.84 5.96 15.07l6.66 5.16C14.19 15.51 18.798 12 24 12Z" />
+                <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+                  <path fill="#4285F4" d="M17.64 9.2c0-.74-.06-1.28-.19-1.84H9v3.34h4.96c-.1.83-.64 2.08-1.84 2.92l2.84 2.2c1.7-1.57 2.68-3.88 2.68-6.62z" />
+                  <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.84-2.2c-.76.53-1.78.9-3.12.9-2.38 0-4.41-1.57-5.13-3.74L.97 13.02C2.45 15.98 5.48 18 9 18z" />
+                  <path fill="#FBBC05" d="M3.87 10.78c-.19-.53-.3-1.1-.3-1.78s.11-1.25.3-1.78L.97 4.96C.35 6.18 0 7.55 0 9s.35 2.82.97 4.04l2.9-2.26z" />
+                  <path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0 5.48 0 2.45 2.02.97 4.96l2.9 2.26C4.59 5.05 6.62 3.58 9 3.58z" />
                 </svg>
-                {authSubmitting ? 'מתחבר...' : 'המשך עם Google'}
+                <span>{authSubmitting ? 'מתחבר...' : 'התחבר באמצעות Google'}</span>
               </button>
+              <div className="google-auth-note">
+                <span className="material-symbols-rounded" aria-hidden="true">verified_user</span>
+                <span>התחברות מאובטחת באמצעות Google</span>
+              </div>
             </div>
           </div>
         );
