@@ -564,7 +564,14 @@
     const { useState, useEffect, useRef } = React;
     const supabase = window.supabase.createClient(
       'https://lguuxrwjwwzxkhydjryo.supabase.co',
-      'sb_publishable_mOtrogkoIlfugUNztuFyYA_yN7T-av8'
+      'sb_publishable_mOtrogkoIlfugUNztuFyYA_yN7T-av8',
+      {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true
+        }
+      }
     );
 
     const COMMON_TRIGGER_REASONS = [
@@ -677,8 +684,12 @@
 
       useEffect(() => {
         let isMounted = true;
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
           if (isMounted) {
+            if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+              setAuthError('');
+              setAuthSubmitting(false);
+            }
             const nextUser = session?.user || null;
             const nextUserId = nextUser?.id || null;
             if (authUserIdRef.current !== nextUserId) {
@@ -833,8 +844,9 @@
 
       const handleSignOut = async () => {
         setAuthError('');
+        setAuthSubmitting(true);
         try {
-          const { error } = await supabase.auth.signOut();
+          const { error } = await supabase.auth.signOut({ scope: 'local' });
           if (error) {
             console.error('Supabase sign out failed:', error.message);
             setAuthError('ההתנתקות נכשלה. נסה שוב.');
@@ -842,6 +854,8 @@
         } catch (error) {
           console.error('Supabase sign out request failed:', error);
           setAuthError('ההתנתקות נכשלה. נסה שוב.');
+        } finally {
+          setAuthSubmitting(false);
         }
       };
 
@@ -1230,9 +1244,10 @@
                   {authError && <p role="alert" className="text-sm text-red-500">{authError}</p>}
                   <button
                     onClick={handleSignOut}
-                    className="w-full min-h-11 px-4 py-2.5 rounded-xl border border-rose-500/30 text-rose-600 font-medium transition-all active:scale-95"
+                    disabled={authSubmitting}
+                    className="w-full min-h-11 px-4 py-2.5 rounded-xl border border-rose-500/30 text-rose-600 font-medium transition-all active:scale-95 disabled:opacity-50"
                   >
-                    התנתקות וחזרה למסך הכניסה
+                    {authSubmitting ? 'מתנתק...' : 'התנתקות וחזרה למסך הכניסה'}
                   </button>
                 </div>
 
