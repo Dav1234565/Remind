@@ -13,7 +13,7 @@
   <link rel="manifest" href="./manifest.webmanifest">
 
   <!-- חיבור לשרת האייקונים והפונטים של גוגל -->
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
 
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -29,19 +29,27 @@
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
   <style>
-    /* משתני צבעים דינמיים למצב בהיר / כהה בסגנון אפל */
+    /* Palette inspired by shadcn-vue: crisp surfaces, neutral borders, orange accent. */
     .light-theme {
-      --bg-color: #f5f5f7;
-      --text-main: #1d1d1f;
-      --card-bg: rgba(255, 255, 255, 0.55);
-      --card-border: rgba(0, 0, 0, 0.08);
-      --card-shadow: rgba(0, 0, 0, 0.05);
-      --nav-bg: rgba(255, 255, 255, 0.65);
-      --nav-border: rgba(0, 0, 0, 0.12);
-      --nav-shadow: rgba(0, 0, 0, 0.1);
-      --nav-item-color: #3a3a3c;
-      --nav-hover-bg: rgba(0, 0, 0, 0.06);
-      --input-bg: rgba(255, 255, 255, 0.72);
+      color-scheme: light;
+      --bg-color: #fafafa;
+      --text-main: #09090b;
+      --text-color: #09090b;
+      --muted-color: #71717a;
+      --card-bg: #ffffff;
+      --card-border: #e4e4e7;
+      --card-shadow: rgba(24, 24, 27, 0.045);
+      --nav-bg: rgba(255, 255, 255, 0.94);
+      --nav-border: #e4e4e7;
+      --nav-shadow: rgba(24, 24, 27, 0.1);
+      --nav-item-color: #52525b;
+      --nav-hover-bg: #f4f4f5;
+      --input-bg: #ffffff;
+      --accent-color: #f97316;
+      --accent-foreground: #ffffff;
+      --accent-soft: #fff7ed;
+      --field-bg: #ffffff;
+      --field-fg: #09090b;
       --sky-gradient: linear-gradient(180deg, #cfddec 0%, #e2ebf4 50%, #eef2f7 100%);
       --mountain-stop-1: #4d698c;
       --mountain-stop-2: #3c5373;
@@ -52,17 +60,25 @@
     }
 
     .dark-theme {
-      --bg-color: #000000;
-      --text-main: #1d1d1f;
-      --card-bg: #ffffff;
-      --card-border: rgba(0, 0, 0, 0.1);
-      --card-shadow: rgba(255, 255, 255, 0.08);
-      --nav-bg: #ffffff;
-      --nav-border: rgba(0, 0, 0, 0.12);
-      --nav-shadow: rgba(255, 255, 255, 0.12);
-      --nav-item-color: #3a3a3c;
-      --nav-hover-bg: rgba(0, 0, 0, 0.06);
-      --input-bg: #ffffff;
+      color-scheme: dark;
+      --bg-color: #09090b;
+      --text-main: #fafafa;
+      --text-color: #fafafa;
+      --muted-color: #a1a1aa;
+      --card-bg: #111113;
+      --card-border: #27272a;
+      --card-shadow: rgba(0, 0, 0, 0.2);
+      --nav-bg: rgba(17, 17, 19, 0.96);
+      --nav-border: #27272a;
+      --nav-shadow: rgba(0, 0, 0, 0.4);
+      --nav-item-color: #d4d4d8;
+      --nav-hover-bg: #27272a;
+      --input-bg: #18181b;
+      --accent-color: #fb923c;
+      --accent-foreground: #18181b;
+      --accent-soft: #2a1a10;
+      --field-bg: #18181b;
+      --field-fg: #fafafa;
       --sky-gradient: linear-gradient(180deg, #0b132b 0%, #1c2541 60%, #3a506b 100%);
       --mountain-stop-1: #1d2d44;
       --mountain-stop-2: #131a26;
@@ -70,12 +86,6 @@
       --mountain-stop-4: #05070a;
       --shadow-opacity: 0.6;
       --snow-opacity: 0.6;
-    }
-
-    .dark-theme button {
-      background-color: #ffffff !important;
-      border-color: rgba(0, 0, 0, 0.12) !important;
-      color: #1d1d1f !important;
     }
 
     .light-theme,
@@ -90,36 +100,31 @@
       position: relative;
       z-index: 1;
       width: min(100%, 420px);
-      padding: 40px 32px;
+      padding: 30px 32px 26px;
       overflow: hidden;
-      border: 1px solid rgba(255, 255, 255, 0.8);
-      border-radius: 28px;
+      border: 1px solid rgba(228, 228, 236, 0.85);
+      border-radius: 26px;
       text-align: center;
-      background: rgba(255, 255, 255, 0.86);
-      box-shadow: 0 28px 80px rgba(28, 38, 65, 0.16), 0 4px 14px rgba(28, 38, 65, 0.06);
-      backdrop-filter: blur(24px);
-      -webkit-backdrop-filter: blur(24px);
+      background: rgba(255, 255, 255, 0.94);
+      box-shadow: 0 24px 70px rgba(31, 31, 63, 0.1), 0 3px 12px rgba(31, 31, 63, 0.04);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
       animation: authCardEnter 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
     }
 
     .auth-container::before {
-      position: absolute;
-      top: 0;
-      right: 0;
-      left: 0;
-      height: 5px;
-      background: linear-gradient(90deg, #20b7d9, #20e3a2, #20b7d9);
-      content: "";
+      display: none;
     }
 
     .auth-screen {
       position: relative;
       isolation: isolate;
-      overflow: hidden;
+      overflow-x: hidden;
+      overflow-y: auto;
       background:
-        radial-gradient(ellipse at 18% 18%, rgba(32, 227, 162, 0.15), transparent 34%),
-        radial-gradient(ellipse at 82% 82%, rgba(32, 183, 217, 0.14), transparent 38%),
-        linear-gradient(145deg, #f8fafc, #edf2f7);
+        radial-gradient(ellipse at 8% 20%, rgba(170, 132, 235, 0.2), transparent 34%),
+        radial-gradient(ellipse at 96% 86%, rgba(246, 190, 130, 0.2), transparent 36%),
+        linear-gradient(145deg, #fbfaf9, #f7f6f4);
     }
 
     .auth-screen::before,
@@ -129,8 +134,8 @@
       width: 220px;
       height: 220px;
       border-radius: 50%;
-      background: linear-gradient(135deg, rgba(32, 227, 162, 0.18), rgba(32, 183, 217, 0.08));
-      filter: blur(2px);
+      background: linear-gradient(135deg, rgba(166, 132, 235, 0.14), rgba(255, 255, 255, 0.04));
+      filter: blur(14px);
       content: "";
     }
 
@@ -149,22 +154,46 @@
     .auth-logo {
       display: flex;
       justify-content: center;
-      margin-bottom: 24px;
+      margin-bottom: 20px;
+    }
+
+    .auth-logo > div {
+      gap: 10px;
+    }
+
+    .auth-logo svg {
+      width: 48px;
+      height: 48px;
+      padding: 8px;
+      border: 1px solid #e3e1ef;
+      border-radius: 13px;
+      background: #f3f1fa;
+      filter: none;
+    }
+
+    .auth-screen .auth-logo .brand-wordmark {
+      background: none;
+      color: #242333;
+      -webkit-text-fill-color: #242333;
+    }
+
+    .auth-screen .auth-logo .brand-tagline {
+      color: #777487;
     }
 
     .auth-heading {
-      margin: 0 0 10px;
-      color: #17212b;
-      font-size: clamp(1.55rem, 5vw, 1.85rem);
+      margin: 0 0 7px;
+      color: #242333;
+      font-size: clamp(1.5rem, 5vw, 1.75rem);
       font-weight: 750;
       letter-spacing: -0.04em;
     }
 
     .auth-caption {
-      margin: 0 0 28px;
-      color: #687581;
-      font-size: 0.95rem;
-      line-height: 1.7;
+      margin: 0 0 22px;
+      color: #777487;
+      font-size: 0.85rem;
+      line-height: 1.6;
     }
 
     .auth-mode-switch {
@@ -197,30 +226,30 @@
 
     .auth-field {
       display: block;
-      margin-bottom: 16px;
+      margin-bottom: 13px;
       text-align: right;
     }
 
     .auth-field > span {
       display: block;
-      margin-bottom: 7px;
-      color: #4d5963;
-      font-size: 0.82rem;
+      margin-bottom: 6px;
+      color: #555365;
+      font-size: 0.76rem;
       font-weight: 600;
     }
 
     .auth-field input,
     .auth-field textarea {
       width: 100%;
-      min-height: 48px;
-      padding: 12px 14px;
-      border: 1px solid #dfe4e8;
-      border-radius: 12px;
+      min-height: 44px;
+      padding: 10px 14px;
+      border: 1px solid #e3e3e9;
+      border-radius: 14px;
       outline: none;
-      background: #fff;
-      color: #1d1d1f;
+      background: #fafafd;
+      color: #242333;
       font: inherit;
-      font-size: 16px;
+      font-size: 0.88rem;
       transition: border-color 0.2s, box-shadow 0.2s;
     }
 
@@ -231,8 +260,33 @@
 
     .auth-field input:focus,
     .auth-field textarea:focus {
-      border-color: #16cba0;
-      box-shadow: 0 0 0 3px rgba(22, 203, 160, 0.13);
+      border-color: #7164b7;
+      box-shadow: 0 0 0 3px rgba(113, 100, 183, 0.13);
+    }
+
+    .auth-recovery-group {
+      padding: 12px 11px 2px;
+      margin: 1px 0 11px;
+      border: 1px solid #e7e6ec;
+      border-radius: 16px;
+      background: rgba(250, 250, 252, 0.82);
+      text-align: right;
+    }
+
+    .auth-recovery-group legend {
+      padding: 0 3px;
+      color: #555365;
+      font-size: 0.76rem;
+      font-weight: 700;
+    }
+
+    .auth-recovery-group .auth-field {
+      margin-bottom: 7px;
+    }
+
+    .auth-recovery-group .auth-field input {
+      min-height: 42px;
+      text-align: right;
     }
 
     .auth-password-wrap {
@@ -264,23 +318,27 @@
     }
 
     .auth-submit-button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
       width: 100%;
-      min-height: 50px;
+      min-height: 46px;
       padding: 13px 18px;
       border: 0;
-      border-radius: 13px;
-      background: linear-gradient(100deg, #0bb98e, #16cba0);
-      color: #062d25;
-      font-size: 0.95rem;
+      border-radius: 14px;
+      background: #292663;
+      color: #fff;
+      font-size: 0.88rem;
       font-weight: 700;
       cursor: pointer;
-      box-shadow: 0 8px 18px rgba(22, 203, 160, 0.2);
+      box-shadow: 0 7px 16px rgba(41, 38, 99, 0.14);
       transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
     }
 
     .auth-submit-button:hover:not(:disabled) {
       transform: translateY(-1px);
-      box-shadow: 0 11px 22px rgba(22, 203, 160, 0.28);
+      box-shadow: 0 10px 20px rgba(41, 38, 99, 0.2);
     }
 
     .auth-submit-button:disabled {
@@ -294,7 +352,7 @@
       padding: 7px 10px;
       border: 0;
       background: transparent;
-      color: #087c68;
+      color: #514a91;
       font: inherit;
       font-size: 0.85rem;
       font-weight: 600;
@@ -323,9 +381,10 @@
 
     .auth-password-hint {
       display: block;
-      margin-top: 6px;
-      color: #7b8791;
-      font-size: 0.75rem;
+      margin: 8px 2px 12px;
+      color: #777487;
+      font-size: 0.7rem;
+      line-height: 1.5;
     }
 
     .auth-note {
@@ -333,21 +392,21 @@
       align-items: center;
       justify-content: center;
       gap: 7px;
-      margin-top: 20px;
-      color: #7b8791;
-      font-size: 0.75rem;
+      margin-top: 16px;
+      color: #777487;
+      font-size: 0.7rem;
     }
 
     .auth-note .material-symbols-rounded {
       font-size: 16px;
-      color: #14a985;
+      color: #514a91;
     }
 
     .auth-submit-button:focus-visible,
     .auth-secondary-button:focus-visible,
     .auth-mode-button:focus-visible,
     .auth-password-toggle:focus-visible {
-      outline: 3px solid rgba(0, 122, 255, 0.35);
+      outline: 3px solid rgba(81, 74, 145, 0.35);
       outline-offset: 3px;
     }
 
@@ -358,11 +417,11 @@
 
     @media (max-width: 420px) {
       .auth-container {
-        padding: 34px 22px 26px;
+        padding: 28px 22px 22px;
         border-radius: 24px;
       }
 
-      .auth-logo { margin-bottom: 20px; }
+      .auth-logo { margin-bottom: 17px; }
     }
 
     body {
@@ -860,6 +919,844 @@
 
       .mountain-map {
         height: 420px !important;
+      }
+    }
+
+    body {
+      font-family: "Heebo", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg-color);
+      color: var(--text-main);
+    }
+
+    .light-theme,
+    .dark-theme {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+    }
+
+    .light-theme.app-shell {
+      background-image: radial-gradient(ellipse at 50% -18%, rgba(249, 115, 22, 0.07), transparent 48%);
+    }
+
+    .dark-theme.app-shell {
+      background-image: radial-gradient(ellipse at 50% -18%, rgba(251, 146, 60, 0.08), transparent 48%);
+    }
+
+    .apple-card {
+      border-color: var(--card-border);
+      border-radius: 16px;
+      background: var(--card-bg);
+      box-shadow: 0 1px 2px var(--card-shadow), 0 8px 24px var(--card-shadow);
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+    }
+
+    .app-header {
+      min-height: 76px;
+      border-radius: 22px;
+    }
+
+    .timer-card,
+    .settings-panel,
+    .onboarding-card,
+    .modal-panel {
+      border-radius: 16px;
+    }
+
+    .greeting-pill {
+      border-color: color-mix(in srgb, var(--accent-color) 28%, transparent) !important;
+      background: color-mix(in srgb, var(--accent-color) 10%, var(--card-bg)) !important;
+      color: var(--accent-color) !important;
+    }
+
+    .nav-container {
+      bottom: 20px;
+    }
+
+    .apple-navbar {
+      gap: 8px;
+      padding: 8px;
+      border: 1px solid var(--nav-border);
+      border-radius: 18px;
+      background: var(--nav-bg);
+      box-shadow: 0 10px 32px var(--nav-shadow);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+
+    .nav-item {
+      width: 58px;
+      height: 54px;
+      border-radius: 12px;
+      font-weight: 600;
+    }
+
+    .nav-item:hover {
+      transform: translateY(-2px);
+    }
+
+    .nav-item.active {
+      border-color: color-mix(in srgb, var(--accent-color) 30%, transparent);
+      background: color-mix(in srgb, var(--accent-color) 12%, var(--card-bg));
+      color: var(--accent-color);
+    }
+
+    .timer-clock circle.text-blue-500,
+    .timer-clock .text-blue-500 {
+      color: var(--accent-color);
+    }
+
+    .week-option[class*="bg-[#007aff]"] {
+      background: var(--accent-color);
+      color: var(--accent-foreground);
+      box-shadow: 0 6px 16px color-mix(in srgb, var(--accent-color) 24%, transparent);
+    }
+
+    .auth-container {
+      border-color: rgba(228, 228, 236, 0.85);
+      border-radius: 26px;
+      background: rgba(255, 255, 255, 0.94);
+      box-shadow: 0 16px 40px rgba(24, 24, 27, 0.1);
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+    }
+
+    .auth-container::before {
+      display: none;
+    }
+
+    .auth-screen {
+      background:
+        radial-gradient(ellipse at 8% 20%, rgba(170, 132, 235, 0.2), transparent 34%),
+        radial-gradient(ellipse at 96% 86%, rgba(246, 190, 130, 0.2), transparent 36%),
+        linear-gradient(145deg, #fbfaf9, #f7f6f4);
+    }
+
+    .auth-screen::before,
+    .auth-screen::after {
+      background: linear-gradient(135deg, rgba(166, 132, 235, 0.14), rgba(255, 255, 255, 0.04));
+    }
+
+    .auth-heading {
+      color: #242333;
+    }
+
+    .auth-caption,
+    .auth-field > span {
+      color: #777487;
+    }
+
+    .auth-field input,
+    .auth-field textarea {
+      border-color: #e3e3e9;
+      border-radius: 14px;
+      background: #fafafd;
+      color: #242333;
+    }
+
+    .auth-field input:focus,
+    .auth-field textarea:focus {
+      border-color: #7164b7;
+      box-shadow: 0 0 0 3px rgba(113, 100, 183, 0.13);
+    }
+
+    .auth-submit-button {
+      border-color: transparent;
+      background: #292663;
+      color: #fff;
+      box-shadow: 0 7px 16px rgba(41, 38, 99, 0.14);
+    }
+
+    .auth-submit-button:hover:not(:disabled) {
+      background: #292663;
+      box-shadow: 0 10px 20px rgba(41, 38, 99, 0.2);
+    }
+
+    .assistant-launcher,
+    .assistant-form button {
+      border-color: transparent;
+      background: var(--accent-color);
+      color: var(--accent-foreground);
+      box-shadow: 0 4px 12px color-mix(in srgb, var(--accent-color) 22%, transparent);
+    }
+
+    .assistant-launcher:hover,
+    .assistant-form button:hover:not(:disabled) {
+      background: color-mix(in srgb, var(--accent-color) 90%, #000);
+      box-shadow: 0 6px 16px color-mix(in srgb, var(--accent-color) 28%, transparent);
+    }
+
+    .auth-secondary-button {
+      color: #514a91;
+    }
+
+    .assistant-error {
+      color: var(--accent-color);
+    }
+
+    .auth-mode-switch,
+    .week-selector {
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      background: var(--input-bg);
+    }
+
+    .auth-mode-button.active {
+      background: var(--card-bg);
+      color: var(--text-main);
+      box-shadow: 0 1px 3px var(--card-shadow);
+    }
+
+    .settings-panel button:not(.text-rose-600) {
+      border-color: var(--card-border);
+      background-color: var(--card-bg);
+      color: var(--text-main);
+    }
+
+    .settings-panel button:not(.text-rose-600):hover {
+      background-color: var(--input-bg);
+    }
+
+    .settings-panel button[class*="bg-blue-500/10"] {
+      border-color: color-mix(in srgb, var(--accent-color) 50%, var(--card-border));
+      background-color: color-mix(in srgb, var(--accent-color) 10%, var(--card-bg));
+      color: var(--accent-color);
+    }
+
+    .settings-panel button.text-rose-600 {
+      color: #e11d48;
+    }
+
+    .dark-theme .settings-panel button.text-rose-600 {
+      color: #fb7185;
+    }
+
+    .assistant-panel {
+      border-color: var(--card-border);
+      background: var(--card-bg);
+      color: var(--text-main);
+    }
+
+    .assistant-privacy,
+    .assistant-form textarea {
+      color: var(--text-main);
+    }
+
+    .assistant-form textarea {
+      border-color: var(--card-border);
+      background: var(--field-bg);
+    }
+
+    .assistant-message-ai {
+      border-color: var(--card-border);
+      background: var(--input-bg);
+    }
+
+    .app-shell {
+      display: flex;
+      min-height: 100dvh;
+      padding: 28px 28px 36px !important;
+      background-color: var(--bg-color);
+      background-image:
+        radial-gradient(ellipse at 60% 0%, rgba(119, 105, 194, 0.08), transparent 35%),
+        radial-gradient(ellipse at 0% 40%, rgba(244, 208, 155, 0.12), transparent 28%);
+    }
+
+    .app-sidebar {
+      position: fixed;
+      z-index: 30;
+      inset: 0 0 0 auto;
+      display: flex;
+      width: 238px;
+      flex-direction: column;
+      padding: 28px 18px 20px;
+      border-left: 1px solid var(--card-border);
+      background: color-mix(in srgb, var(--card-bg) 92%, var(--bg-color));
+    }
+
+    .sidebar-brand {
+      display: flex;
+      min-height: 58px;
+      align-items: center;
+      padding: 0 8px 18px;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .sidebar-section-label {
+      margin: 22px 10px 12px;
+      color: var(--muted-color);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+    }
+
+    .app-sidebar-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      padding: 0;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      box-shadow: none;
+    }
+
+    .app-sidebar-nav .nav-item {
+      display: flex;
+      width: 100%;
+      min-height: 46px;
+      height: auto;
+      flex-direction: row;
+      justify-content: flex-start;
+      gap: 12px;
+      padding: 0 12px;
+      border: 1px solid transparent;
+      border-radius: 10px;
+      color: var(--muted-color);
+      font-size: 13px;
+      text-align: right;
+      transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+    }
+
+    .app-sidebar-nav .nav-item:hover {
+      transform: none;
+      background: var(--nav-hover-bg);
+      color: var(--text-main);
+    }
+
+    .app-sidebar-nav .nav-item.active {
+      border-color: transparent;
+      background: var(--accent-soft);
+      color: var(--accent-color);
+      box-shadow: inset -2px 0 0 var(--accent-color);
+    }
+
+    .sidebar-bottom {
+      margin-top: auto;
+    }
+
+    .sidebar-streak-card {
+      padding: 14px;
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      background: var(--card-bg);
+    }
+
+    .sidebar-streak-card .sidebar-section-label {
+      display: block;
+      margin: 0 0 10px;
+    }
+
+    .sidebar-streak-value {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+    }
+
+    .sidebar-streak-value strong {
+      font-size: 25px;
+      line-height: 1;
+    }
+
+    .sidebar-streak-value span,
+    .sidebar-streak-caption {
+      color: var(--muted-color);
+      font-size: 11px;
+    }
+
+    .sidebar-streak-caption {
+      display: block;
+      margin-top: 9px;
+    }
+
+    .app-sidebar .assistant-launcher {
+      position: static;
+      width: 100%;
+      min-height: 42px;
+      margin-top: 12px;
+      padding: 0 12px;
+      justify-content: space-between;
+      border: 0;
+      border-radius: 10px;
+      background: #302d69;
+      color: #fff;
+      box-shadow: none;
+      font-size: 12px;
+    }
+
+    .app-sidebar .assistant-launcher:hover {
+      background: #262455;
+    }
+
+    .sidebar-profile {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 18px;
+      padding: 12px 4px 0;
+      border-top: 1px solid var(--card-border);
+    }
+
+    .sidebar-avatar {
+      display: grid;
+      width: 34px;
+      height: 34px;
+      flex: 0 0 auto;
+      place-items: center;
+      border: 1px solid var(--card-border);
+      border-radius: 50%;
+      background: var(--input-bg);
+      color: var(--text-main);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .sidebar-profile-copy {
+      display: flex;
+      min-width: 0;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .sidebar-profile-copy strong {
+      overflow: hidden;
+      font-size: 11px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .sidebar-profile-copy span {
+      color: var(--muted-color);
+      font-size: 10px;
+    }
+
+    .app-main {
+      width: calc(100% - 238px);
+      min-width: 0;
+      margin-right: 238px;
+    }
+
+    .app-content {
+      width: 100%;
+      max-width: 1020px;
+      margin: 0 auto;
+    }
+
+    .page-heading {
+      display: flex;
+      min-height: 74px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 22px;
+    }
+
+    .page-heading h1 {
+      margin: 3px 0 0;
+      color: var(--text-main);
+      font-size: clamp(26px, 3vw, 36px);
+      font-weight: 800;
+      letter-spacing: -0.045em;
+      line-height: 1.15;
+    }
+
+    .page-eyebrow,
+    .dashboard-kicker {
+      margin: 0;
+      color: var(--muted-color);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+    }
+
+    .page-heading .greeting-pill {
+      padding: 8px 12px;
+      border: 1px solid var(--card-border);
+      border-radius: 999px;
+      background: var(--card-bg);
+      font-size: 11px;
+      white-space: nowrap;
+    }
+
+    .timer-dashboard {
+      display: grid;
+      min-height: 350px;
+      grid-template-columns: minmax(0, 1fr) 280px;
+      align-items: center;
+      gap: clamp(20px, 6vw, 72px);
+      padding: clamp(24px, 5vw, 56px);
+      text-align: right;
+    }
+
+    .timer-summary h2 {
+      margin: 10px 0 8px;
+      color: var(--text-main);
+      font-size: clamp(28px, 4vw, 42px);
+      font-weight: 800;
+      letter-spacing: -0.045em;
+    }
+
+    .timer-summary-copy {
+      max-width: 390px;
+      margin: 0;
+      color: var(--muted-color);
+      font-size: 13px;
+      line-height: 1.8;
+    }
+
+    .timer-summary-divider {
+      height: 1px;
+      margin: 22px 0 12px;
+      background: var(--card-border);
+    }
+
+    .timer-stat-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 8px 0;
+      color: var(--muted-color);
+      font-size: 11px;
+    }
+
+    .timer-stat-row strong {
+      color: var(--text-main);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .timer-stat-row .timer-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      color: var(--muted-color);
+    }
+
+    .timer-status span {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #47a98c;
+      box-shadow: 0 0 0 3px rgba(71, 169, 140, 0.12);
+    }
+
+    .timer-reset-hint {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin: 14px 0 0;
+      color: var(--muted-color);
+      font-size: 10px;
+    }
+
+    .timer-reset-hint .material-symbols-rounded {
+      font-size: 15px;
+    }
+
+    .timer-clock {
+      width: 248px !important;
+      height: 248px !important;
+      border: 1px solid var(--card-border);
+      background: radial-gradient(circle, var(--card-bg) 54%, var(--accent-soft));
+      box-shadow: 0 0 0 10px color-mix(in srgb, var(--card-bg) 70%, transparent), 0 0 0 11px var(--card-border);
+    }
+
+    .timer-clock > div:last-child {
+      background: transparent;
+      box-shadow: none;
+    }
+
+    .timer-ring-label {
+      margin-bottom: 4px;
+      color: var(--muted-color);
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+    }
+
+    .timer-clock svg circle {
+      stroke: var(--accent-color);
+    }
+
+    .timer-clock .text-blue-500 {
+      color: var(--accent-color);
+    }
+
+    .assistant-panel {
+      z-index: 61;
+      left: calc((100vw - 238px - 440px) / 2);
+      right: auto;
+      bottom: 50%;
+      width: min(440px, calc(100vw - 300px));
+      height: min(620px, calc(100dvh - 48px));
+      transform: translateY(50%);
+      border-radius: 16px;
+      box-shadow: 0 24px 80px rgba(24, 24, 27, 0.24);
+    }
+
+    #root:has(.assistant-panel)::before {
+      position: fixed;
+      z-index: 50;
+      inset: 0;
+      background: rgba(24, 24, 27, 0.35);
+      backdrop-filter: blur(3px);
+      content: "";
+      pointer-events: none;
+    }
+
+    .assistant-header {
+      min-height: 64px;
+      background: var(--card-bg);
+    }
+
+    .assistant-form {
+      background: var(--card-bg);
+    }
+
+    .settings-panel {
+      padding: 0 !important;
+      border: 0;
+      background: transparent;
+      box-shadow: none;
+    }
+
+    .settings-panel > h3 {
+      margin-bottom: 20px;
+      font-size: 20px;
+    }
+
+    .settings-panel > div {
+      padding: 20px !important;
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      background: var(--card-bg);
+      box-shadow: 0 1px 2px var(--card-shadow);
+    }
+
+    .settings-panel > div:last-child {
+      background: transparent;
+      box-shadow: none;
+    }
+
+    .week-selector {
+      justify-content: space-between;
+      padding: 6px;
+      background: var(--card-bg);
+    }
+
+    .week-option {
+      flex: 1;
+      border: 1px solid transparent;
+      color: var(--muted-color);
+    }
+
+    .week-option[class*="bg-[#007aff]"] {
+      border-color: transparent;
+      background: #302d69;
+      color: #fff;
+      box-shadow: none;
+    }
+
+    .mountain-map {
+      min-height: 460px;
+      border-radius: 18px !important;
+      background: #edf4f0 !important;
+      box-shadow: 0 12px 32px rgba(36, 47, 42, 0.08) !important;
+    }
+
+    .mountain-map .sun-glow {
+      top: 28%;
+      width: 230px;
+      height: 230px;
+      background: radial-gradient(circle, rgba(247, 185, 110, 0.22), transparent 70%);
+    }
+
+    .mountain-map .mountain-svg polygon:nth-child(1),
+    .mountain-map .mountain-svg polygon:nth-child(2) {
+      fill: #d9e8e1 !important;
+    }
+
+    .mountain-map .mountain-svg polygon:nth-child(3) {
+      fill: #7466bf !important;
+    }
+
+    .mountain-map .mountain-svg polygon:nth-child(5) {
+      fill: #514a8c !important;
+    }
+
+    .mountain-map .mountain-svg polygon:nth-child(4) {
+      fill: #fff !important;
+    }
+
+    .mountain-map .weekly-day-button {
+      width: 42px;
+      height: 42px;
+      border: 3px solid #fff;
+      border-radius: 50%;
+      background: #e3efea;
+      color: #52776b;
+      box-shadow: 0 2px 12px rgba(38, 68, 58, 0.12);
+    }
+
+    .mountain-map .weekly-day-button[class*="bg-emerald"] {
+      background: #d9eee6;
+      color: #3c7260;
+      box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.75), 0 2px 12px rgba(38, 68, 58, 0.12);
+    }
+
+    .mountain-map .weekly-day-button[class*="bg-rose"] {
+      background: #f7e3e1;
+      color: #bd5a56;
+    }
+
+    .mountain-map .weekly-day-button[class*="bg-zinc-900/40"] {
+      background: rgba(255, 255, 255, 0.55);
+      color: #8d9994;
+      border-color: rgba(255, 255, 255, 0.75);
+      box-shadow: none;
+    }
+
+    .mountain-map .mountain-peak-flag-cloth {
+      fill: #e69b35;
+    }
+
+    @media (max-width: 760px) {
+      .app-shell {
+        display: block;
+        padding: 18px 14px calc(118px + env(safe-area-inset-bottom)) !important;
+      }
+
+      .app-sidebar {
+        inset: auto auto calc(10px + env(safe-area-inset-bottom)) 50%;
+        width: min(94vw, 420px);
+        min-height: 64px;
+        flex-direction: row;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 6px;
+        transform: translateX(-50%);
+        border: 1px solid var(--nav-border);
+        border-radius: 18px;
+        background: var(--nav-bg);
+        box-shadow: 0 10px 32px var(--nav-shadow);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+      }
+
+      .sidebar-brand,
+      .app-sidebar > .sidebar-section-label {
+        display: none;
+      }
+
+      .sidebar-bottom {
+        display: flex;
+        flex: 0 0 auto;
+        margin: 0;
+      }
+
+      .sidebar-streak-card,
+      .sidebar-profile {
+        display: none;
+      }
+
+      .app-sidebar .assistant-launcher {
+        width: 46px;
+        min-width: 46px;
+        height: 48px;
+        min-height: 48px;
+        margin: 0;
+        padding: 0;
+        justify-content: center;
+        border-radius: 12px;
+      }
+
+      .app-sidebar .assistant-launcher > span:last-child {
+        display: none;
+      }
+
+      .app-sidebar-nav {
+        width: 100%;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-around;
+        gap: 2px;
+      }
+
+      .app-sidebar-nav .nav-item {
+        min-width: 0;
+        min-height: 48px;
+        flex: 1;
+        flex-direction: column;
+        justify-content: center;
+        gap: 1px;
+        padding: 2px;
+        font-size: 10px;
+      }
+
+      .app-sidebar-nav .nav-item.active {
+        box-shadow: none;
+      }
+
+      .app-main {
+        width: 100%;
+        margin: 0;
+      }
+
+      .page-heading {
+        min-height: 58px;
+        margin-bottom: 16px;
+      }
+
+      .page-heading h1 {
+        font-size: 28px;
+      }
+
+      .page-heading .greeting-pill {
+        max-width: 44%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .timer-dashboard {
+        min-height: 0;
+        grid-template-columns: 1fr;
+        justify-items: center;
+        gap: 28px;
+        padding: 22px 18px 26px;
+      }
+
+      .timer-summary {
+        width: 100%;
+      }
+
+      .timer-summary h2 {
+        font-size: 30px;
+      }
+
+      .timer-clock {
+        width: min(248px, 68vw) !important;
+        height: auto !important;
+        aspect-ratio: 1;
+      }
+
+      .assistant-panel {
+        left: 12px;
+        right: 12px;
+        bottom: calc(88px + env(safe-area-inset-bottom));
+        width: auto;
+        height: min(560px, calc(100dvh - 150px - env(safe-area-inset-top) - env(safe-area-inset-bottom)));
+        transform: none;
+      }
+
+      .mountain-map {
+        min-height: 400px;
+        height: clamp(400px, 68dvh, 540px) !important;
+      }
+
+      .settings-panel > div {
+        padding: 16px !important;
       }
     }
   </style>
@@ -1505,6 +2402,11 @@
       const minutes = Math.floor((elapsedSeconds % 3600) / 60);
       const seconds = elapsedSeconds % 60;
       const circleProgress = (seconds / 60) * 100;
+      const pageTitle = activeTab === 'timer'
+        ? 'הרצף שלך'
+        : activeTab === 'calendar'
+          ? 'מפת המסע'
+          : 'המרחב שלך';
 
       const handleCreateLocalLock = async (event) => {
         event.preventDefault();
@@ -1905,11 +2807,11 @@
             <section className="auth-container apple-card shadow-2xl" aria-labelledby="local-lock-heading">
               <div className="auth-logo"><RemindLogo size="lg" /></div>
               <h1 id="local-lock-heading" className="auth-heading">
-                {isFirstSetup ? 'ברוכים הבאים ל־Remind' : getGreeting(clock, profile.name || lockName)}
+                {isFirstSetup ? 'מרחב אישי חדש' : getGreeting(clock, profile.name || lockName)}
               </h1>
               <p className="auth-caption">
                 {isFirstSetup
-                  ? 'הגדר/י נעילה אישית למכשיר הזה.'
+                  ? 'יוצרים לך מקום אישי ומאובטח, שנשאר שלך בלבד.'
                   : unlockMode === 'recovery'
                     ? 'ענה/י על שאלות השחזור כדי ליצור סיסמה חדשה.'
                     : 'הזן/י את הסיסמה או השתמש/י ב־Face ID כדי להמשיך.'}
@@ -1951,25 +2853,29 @@
                       placeholder="הקלד/י שוב את הסיסמה"
                     />
                   </label>
-                  {RECOVERY_QUESTIONS.map((question, index) => (
-                    <label className="auth-field" key={question}>
-                      <span>{question}</span>
-                      <input
-                        type="text"
-                        autoComplete="off"
-                        required
-                        value={recoveryAnswers[index]}
-                        onChange={(event) => setRecoveryAnswers((previous) => previous.map(
-                          (answer, answerIndex) => answerIndex === index ? event.target.value : answer
-                        ))}
-                        placeholder="תשובת שחזור"
-                      />
-                    </label>
-                  ))}
-                  <p className="auth-password-hint">בחר/י תשובות שתזכור/י. הן יישמרו כהצפנה מקומית ולא ניתן יהיה לשחזר אותן.</p>
+                  <fieldset className="auth-recovery-group">
+                    <legend>שאלות שחזור</legend>
+                    {RECOVERY_QUESTIONS.map((question, index) => (
+                      <label className="auth-field" key={question}>
+                        <input
+                          type="text"
+                          autoComplete="off"
+                          aria-label={question}
+                          required
+                          value={recoveryAnswers[index]}
+                          onChange={(event) => setRecoveryAnswers((previous) => previous.map(
+                            (answer, answerIndex) => answerIndex === index ? event.target.value : answer
+                          ))}
+                          placeholder={question}
+                        />
+                      </label>
+                    ))}
+                  </fieldset>
+                  <p className="auth-password-hint">התשובות נשמרות מוצפנות במכשיר הזה בלבד. בחר/י תשובות שקל לזכור.</p>
                   {lockError && <p role="alert" className="auth-message">{lockError}</p>}
                   <button type="submit" className="auth-submit-button" disabled={lockSubmitting}>
-                    {lockSubmitting ? 'רק רגע...' : 'יצירת נעילה והמשך'}
+                    {lockSubmitting ? 'רק רגע...' : 'יצירת המרחב שלי'}
+                    {!lockSubmitting && <span className="material-symbols-rounded" aria-hidden="true">arrow_back</span>}
                   </button>
                 </form>
               ) : unlockMode === 'recovery' ? (
@@ -2080,7 +2986,8 @@
               )}
               {isFirstSetup && (
                 <p className="auth-note">
-                  הנעילה פועלת במכשיר הזה בלבד. אפשר להפעיל Face ID אחרי הכניסה.
+                  <span className="material-symbols-rounded" aria-hidden="true">auto_awesome</span>
+                  הנתונים נשמרים במכשיר הזה בלבד
                 </p>
               )}
             </section>
@@ -2149,25 +3056,97 @@
 
       return (
         <div className={`app-shell min-h-screen p-4 md:p-8 pb-32 ${currentTheme}`} dir="rtl">
-          <div className="app-content max-w-4xl mx-auto space-y-6">
-            
-            {/* סרגל עליון */}
-            <header className="app-header apple-card px-6 py-4 flex justify-between items-center relative z-20">
+          <aside className="app-sidebar">
+            <div className="sidebar-brand">
               <RemindLogo size="sm" />
-              <div className="flex items-center gap-3">
-                <span className="greeting-pill text-xs text-blue-500 bg-blue-500/10 px-3 py-1 rounded-full border border-blue-500/20 font-medium">
-                  {getGreeting(clock, profile.name)}
+            </div>
+            <p className="sidebar-section-label">ניווט</p>
+            <nav className="apple-navbar app-sidebar-nav" aria-label="ניווט ראשי">
+              <a href="#" onClick={(e) => { e.preventDefault(); setActiveTab('timer'); }} className={`nav-item ${activeTab === 'timer' ? 'active' : ''}`}>
+                <span className="material-symbols-rounded text-xl">home</span>
+                <span className="label">היום</span>
+              </a>
+              <a href="#" onClick={(e) => { e.preventDefault(); setActiveTab('calendar'); }} className={`nav-item ${activeTab === 'calendar' ? 'active' : ''}`}>
+                <span className="material-symbols-rounded text-xl">landscape</span>
+                <span className="label">המסע</span>
+              </a>
+              <a href="#" onClick={(e) => { e.preventDefault(); setActiveTab('settings'); }} className={`nav-item ${activeTab === 'settings' ? 'active' : ''}`}>
+                <span className="material-symbols-rounded text-xl">settings</span>
+                <span className="label">הגדרות</span>
+              </a>
+            </nav>
+            <div className="sidebar-bottom">
+              <div className="sidebar-streak-card">
+                <span className="sidebar-section-label">הרצף הנוכחי</span>
+                <div className="sidebar-streak-value">
+                  <strong>{days}</strong>
+                  <span>ימים</span>
+                </div>
+                <span className="sidebar-streak-caption">
+                  {days === 1 ? 'יום אחד בכל פעם' : 'ממשיכים צעד אחר צעד'}
                 </span>
               </div>
+              <button
+                type="button"
+                className="assistant-launcher"
+                onClick={() => setAssistantOpen((open) => !open)}
+                aria-label={assistantOpen ? 'סגירת העוזר האישי' : 'פתיחת העוזר האישי'}
+                aria-expanded={assistantOpen}
+              >
+                <span className="material-symbols-rounded" aria-hidden="true">
+                  {assistantOpen ? 'close' : 'auto_awesome'}
+                </span>
+                <span>העוזר האישי</span>
+              </button>
+              <div className="sidebar-profile">
+                <span className="sidebar-avatar" aria-hidden="true">
+                  {(profile.name || 'R').trim().charAt(0)}
+                </span>
+                <span className="sidebar-profile-copy">
+                  <strong>{profile.name || 'Remind'}</strong>
+                  <span>המרחב האישי שלך</span>
+                </span>
+              </div>
+            </div>
+          </aside>
+
+          <main className="app-main">
+          <div className="app-content max-w-4xl mx-auto space-y-6">
+            <header className="page-heading">
+              <div>
+                <p className="page-eyebrow">
+                  {clock.toLocaleDateString('he-IL', { weekday: 'long', day: 'numeric', month: 'long' })}
+                </p>
+                <h1>{pageTitle}</h1>
+              </div>
+              <span className="greeting-pill">
+                {getGreeting(clock, profile.name)}
+              </span>
             </header>
 
             {/* --- מסך 1: טיימר --- */}
             {activeTab === 'timer' && (
               <div className="space-y-6 animate-fadeIn">
-                <div className="timer-card apple-card p-8 text-center space-y-8 flex flex-col items-center">
-                  <div className="flex justify-between w-full items-center">
-                    <span className="text-xs font-semibold opacity-60 uppercase tracking-wider">טיימר רצף נקי</span>
-                    <span className="text-xs opacity-50">מצב מאובטח</span>
+                <div className="timer-card timer-dashboard apple-card p-8">
+                  <div className="timer-summary">
+                    <span className="dashboard-kicker">היעד הבא</span>
+                    <h2>{days === 1 ? 'יום אחד' : `${days} ימים`}</h2>
+                    <p className="timer-summary-copy">
+                      ממשיכים בדרך שלך, רגע אחד ובחירה אחת בכל פעם.
+                    </p>
+                    <div className="timer-summary-divider"></div>
+                    <div className="timer-stat-row">
+                      <span>זמן רצף</span>
+                      <strong>{String(hours).padStart(2, '0')}:{String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}</strong>
+                    </div>
+                    <div className="timer-stat-row">
+                      <span>מצב</span>
+                      <strong className="timer-status"><span aria-hidden="true"></span> ממשיכים קדימה</strong>
+                    </div>
+                    <p className="timer-reset-hint">
+                      <span className="material-symbols-rounded" aria-hidden="true">restart_alt</span>
+                      לחיצה על השעון מאפשרת לדווח ולאפס
+                    </p>
                   </div>
 
                   <div onClick={() => setShowResetModal(true)} className="timer-clock relative w-64 h-64 rounded-full flex items-center justify-center cursor-pointer group transition-transform hover:scale-105" title="לחץ לאיפוס">
@@ -2176,9 +3155,10 @@
                       <circle cx="128" cy="128" r="120" stroke="currentColor" strokeWidth="6" fill="transparent" className="text-blue-500 transition-all duration-500" strokeDasharray={754} strokeDashoffset={754 - (754 * circleProgress) / 100} />
                     </svg>
                     <div className="absolute inset-2 rounded-full bg-[var(--card-bg)] flex flex-col items-center justify-center space-y-1 shadow-inner group-hover:opacity-100 transition-opacity">
+                      <span className="timer-ring-label">ימים נקיים</span>
                       <div className="text-3xl md:text-4xl font-black">{days} <span className="text-xs font-normal opacity-70">ימים</span></div>
                       <div className="text-lg font-bold opacity-80">{String(hours).padStart(2, '0')}:{String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}</div>
-                      <div className="text-[10px] text-blue-500 font-semibold pt-1">לחץ לאיפוס טיימר</div>
+                      <div className="text-[10px] text-blue-500 font-semibold pt-1">הקצב שלך, בדרך שלך</div>
                     </div>
                   </div>
                 </div>
@@ -2407,37 +3387,7 @@
             )}
 
           </div>
-
-          {/* --- סרגל הניווט המרחף של אפל בתחתית --- */}
-          <div className="nav-container">
-            <nav className="apple-navbar">
-              <a href="#" onClick={(e) => { e.preventDefault(); setActiveTab('timer'); }} className={`nav-item ${activeTab === 'timer' ? 'active' : ''}`}>
-                <span className="material-symbols-rounded text-xl">home</span>
-                <span className="label">בית</span>
-              </a>
-              <a href="#" onClick={(e) => { e.preventDefault(); setActiveTab('calendar'); }} className={`nav-item ${activeTab === 'calendar' ? 'active' : ''}`}>
-                <span className="material-symbols-rounded text-xl">landscape</span>
-                <span className="label">ההר</span>
-              </a>
-              <a href="#" onClick={(e) => { e.preventDefault(); setActiveTab('settings'); }} className={`nav-item ${activeTab === 'settings' ? 'active' : ''}`}>
-                <span className="material-symbols-rounded text-xl">settings</span>
-                <span className="label">הגדרות</span>
-              </a>
-            </nav>
-          </div>
-
-          <button
-            type="button"
-            className="assistant-launcher"
-            onClick={() => setAssistantOpen((open) => !open)}
-            aria-label={assistantOpen ? 'סגירת העוזר האישי' : 'פתיחת העוזר האישי'}
-            aria-expanded={assistantOpen}
-          >
-            <span className="material-symbols-rounded" aria-hidden="true">
-              {assistantOpen ? 'close' : 'auto_awesome'}
-            </span>
-            {!assistantOpen && <span>העוזר שלי</span>}
-          </button>
+          </main>
 
           {assistantOpen && (
             <section className="assistant-panel apple-card" aria-label="העוזר האישי של Remind">
