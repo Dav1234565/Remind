@@ -699,7 +699,24 @@
     const LOCAL_PROFILE_KEY = 'remind:personal:profile';
     const LOCAL_MIGRATION_KEY = 'remind:personal:migrated';
     const LOCAL_UNLOCKED_KEY = 'remind:personal:unlocked';
+    const HOURLY_REMINDERS_KEY = 'remind:personal:hourly-reminders';
+    const PUSH_INSTALLATION_ID_KEY = 'remind:personal:push-installation-id';
+    const SUPABASE_URL = 'https://lguuxrwjwwzxkhydjryo.supabase.co';
+    const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_mOtrogkoIlfugUNztuFyYA_yN7T-av8';
     const LEGACY_SUPABASE_AUTH_KEY = 'sb-lguuxrwjwwzxkhydjryo-auth-token';
+    const HOURLY_REMINDER_QUOTES = [
+      'כל רגע הוא הזדמנות חדשה להתקדם לעבר המטרות שלך!',
+      'אתה עושה עבודה מדהימה, תמשיך ככה!',
+      'הצעדים הקטנים שאתה עושה כל יום יוצרים את השינוי הגדול.',
+      'קח רגע לנשום עמוק, אתה בדרך הנכונה!',
+      'היום הזה מלא בפוטנציאל, תפיק ממנו את המיטב!',
+      'התמדה היא המפתח להצלחה. תהיה גאה בדרך שלך!'
+    ];
+    const RECOVERY_QUESTIONS = [
+      'מה הצבע האהוב עליך?',
+      'מה הסדרה האהובה עליך?',
+      'מה המאכל האהוב עליך?'
+    ];
 
     const toBase64Url = (bytes) => {
       let binary = '';
@@ -719,6 +736,35 @@
       return bytes;
     };
 
+    const getPushInstallationId = () => {
+      let id = localStorage.getItem(PUSH_INSTALLATION_ID_KEY);
+      if (!id) {
+        id = crypto.randomUUID();
+        localStorage.setItem(PUSH_INSTALLATION_ID_KEY, id);
+      }
+      return id;
+    };
+
+    const decodeVapidPublicKey = (key) => fromBase64Url(key);
+
+    const fetchPushFunction = async (payload) => {
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/remind-push`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: SUPABASE_PUBLISHABLE_KEY,
+          Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const result = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(result?.error || `שירות ההתראות החזיר שגיאה (${response.status}).`);
+      }
+      return result;
+    };
+
     const hashLocalPassword = async (password, salt) => {
       const key = await crypto.subtle.importKey(
         'raw',
@@ -733,6 +779,47 @@
         256
       );
       return new Uint8Array(bits);
+    };
+
+    const verifyLocalPassword = async (password, savedLock) => {
+      if (!savedLock?.salt || !savedLock?.passwordHash) return false;
+      const actualHash = await hashLocalPassword(password, fromBase64Url(savedLock.salt));
+      const expectedHash = fromBase64Url(savedLock.passwordHash);
+      return actualHash.length === expectedHash.length &&
+        actualHash.every((byte, index) => byte === expectedHash[index]);
+    };
+
+    const normalizeRecoveryAnswer = (answer) => (
+      answer.normalize('NFKC').trim().replace(/\s+/g, ' ').toLocaleLowerCase('he')
+    );
+
+    const createRecoveryAnswers = async (answers) => Promise.all(
+      answers.map(async (answer) => {
+        const salt = randomBytes(16);
+        const hash = await hashLocalPassword(normalizeRecoveryAnswer(answer), salt);
+        return { salt: toBase64Url(salt), hash: toBase64Url(hash) };
+      })
+    );
+
+    const verifyRecoveryAnswers = async (answers, savedAnswers) => {
+      if (!Array.isArray(savedAnswers) ||
+          savedAnswers.length !== RECOVERY_QUESTIONS.length ||
+          answers.length !== RECOVERY_QUESTIONS.length) {
+        return false;
+      }
+
+      const results = await Promise.all(answers.map(async (answer, index) => {
+        const savedAnswer = savedAnswers[index];
+        if (!savedAnswer?.salt || !savedAnswer?.hash || !answer.trim()) return false;
+        const actualHash = await hashLocalPassword(
+          normalizeRecoveryAnswer(answer),
+          fromBase64Url(savedAnswer.salt)
+        );
+        const expectedHash = fromBase64Url(savedAnswer.hash);
+        return actualHash.length === expectedHash.length &&
+          actualHash.every((byte, byteIndex) => byte === expectedHash[byteIndex]);
+      }));
+      return results.every(Boolean);
     };
 
     const migrateLegacyLocalData = () => {
@@ -914,9 +1001,22 @@
       const [lockName, setLockName] = useState('');
       const [lockPassword, setLockPassword] = useState('');
       const [lockPasswordConfirmation, setLockPasswordConfirmation] = useState('');
+      const [recoveryAnswers, setRecoveryAnswers] = useState(['', '', '']);
+      const [unlockMode, setUnlockMode] = useState('password');
+      const [recoveryNewPassword, setRecoveryNewPassword] = useState('');
+      const [recoveryNewPasswordConfirmation, setRecoveryNewPasswordConfirmation] = useState('');
+      const [showRecoverySettings, setShowRecoverySettings] = useState(false);
+      const [recoverySetupPassword, setRecoverySetupPassword] = useState('');
+      const [recoverySetupAnswers, setRecoverySetupAnswers] = useState(['', '', '']);
       const [lockError, setLockError] = useState('');
       const [lockSubmitting, setLockSubmitting] = useState(false);
       const [biometricAvailable, setBiometricAvailable] = useState(false);
+      const [hourlyRemindersEnabled, setHourlyRemindersEnabled] = useState(() => (
+        localStorage.getItem(HOURLY_REMINDERS_KEY) === 'true' &&
+        'Notification' in window &&
+        Notification.permission === 'granted'
+      ));
+      const [notificationStatus, setNotificationStatus] = useState('');
       const [clock, setClock] = useState(() => new Date());
       const [isRegistered, setIsRegistered] = useState(false);
       const [onboardingError, setOnboardingError] = useState('');
@@ -1036,6 +1136,103 @@
         return () => clearInterval(interval);
       }, []);
 
+      const sendTimeMotivationNotification = async () => {
+        const now = new Date();
+        const totalMinutesPassed = now.getHours() * 60 + now.getMinutes();
+        const hoursPassed = Math.floor(totalMinutesPassed / 60);
+        const minutesPassed = totalMinutesPassed % 60;
+        const totalMinutesLeft = 24 * 60 - totalMinutesPassed;
+        const hoursLeft = Math.floor(totalMinutesLeft / 60);
+        const minutesLeft = totalMinutesLeft % 60;
+        const quote = HOURLY_REMINDER_QUOTES[
+          Math.floor(Math.random() * HOURLY_REMINDER_QUOTES.length)
+        ];
+        const body = `עברו ${hoursPassed} שעות ו-${minutesPassed} דקות מהיום.\n` +
+          `נשארו עוד ${hoursLeft} שעות ו-${minutesLeft} דקות עד סוף היום.\n\n💬 ${quote}`;
+        const options = {
+          body,
+          icon: new URL('./assets/remind-logo.png', window.location.href).toString(),
+          tag: 'remind-hourly-motivation'
+        };
+        const registration = await navigator.serviceWorker.ready;
+        await registration.showNotification('⏰ Remind - עדכון שעתי', options);
+      };
+
+      useEffect(() => {
+        if (hourlyRemindersEnabled && 'Notification' in window && Notification.permission !== 'granted') {
+          setHourlyRemindersEnabled(false);
+          localStorage.removeItem(HOURLY_REMINDERS_KEY);
+        }
+      }, [hourlyRemindersEnabled]);
+
+      const handleEnableHourlyReminders = async () => {
+        setNotificationStatus('');
+        if (!('Notification' in window)) {
+          setNotificationStatus('הדפדפן במכשיר שלך אינו תומך בהתראות מערכת.');
+          return;
+        }
+        if (!window.isSecureContext || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+          setNotificationStatus('התראות זמינות רק באתר מאובטח (HTTPS) או ב־localhost.');
+          return;
+        }
+
+        try {
+          const permission = Notification.permission === 'default'
+            ? await Notification.requestPermission()
+            : Notification.permission;
+          if (permission !== 'granted') {
+            setNotificationStatus('יש לאשר התראות בהגדרות הדפדפן כדי להפעיל תזכורות.');
+            return;
+          }
+
+          await navigator.serviceWorker.register('./sw.js');
+          const registration = await navigator.serviceWorker.ready;
+          let subscription = await registration.pushManager.getSubscription();
+          if (!subscription) {
+            const { vapidPublicKey } = await fetchPushFunction({ action: 'public-key' });
+            if (!vapidPublicKey) throw new Error('שירות ההתראות לא הוגדר עם מפתח Push ציבורי.');
+            subscription = await registration.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: decodeVapidPublicKey(vapidPublicKey)
+            });
+          }
+
+          await fetchPushFunction({
+            action: 'subscribe',
+            installationId: getPushInstallationId(),
+            subscription: subscription.toJSON(),
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+            siteUrl: new URL('./', window.location.href).toString()
+          });
+          await sendTimeMotivationNotification();
+          localStorage.setItem(HOURLY_REMINDERS_KEY, 'true');
+          setHourlyRemindersEnabled(true);
+          setNotificationStatus('התזכורות השעתיות הופעלו, גם כשהאתר סגור. נשלחה התראת בדיקה.');
+        } catch (error) {
+          console.error('Could not enable hourly Remind notifications:', error);
+          setNotificationStatus(error.message || 'לא ניתן להפעיל התראות Push. בדוק/י את הגדרות Supabase ואת הרשאות הדפדפן.');
+        }
+      };
+
+      const handleDisableHourlyReminders = async () => {
+        setNotificationStatus('');
+        try {
+          await fetchPushFunction({
+            action: 'unsubscribe',
+            installationId: getPushInstallationId()
+          });
+          const registration = await navigator.serviceWorker.ready;
+          const subscription = await registration.pushManager.getSubscription();
+          if (subscription) await subscription.unsubscribe();
+          localStorage.removeItem(HOURLY_REMINDERS_KEY);
+          setHourlyRemindersEnabled(false);
+          setNotificationStatus('התזכורות השעתיות כובו.');
+        } catch (error) {
+          console.error('Could not disable hourly Remind notifications:', error);
+          setNotificationStatus(error.message || 'לא ניתן לכבות כרגע את התזכורות. נסה/י שוב.');
+        }
+      };
+
       useEffect(() => {
         if (!isRegistered) return;
         const updateTimer = () => {
@@ -1070,15 +1267,21 @@
           setLockError('אימות הסיסמה אינו תואם לסיסמה שהוזנה.');
           return;
         }
+        if (recoveryAnswers.some((answer) => !answer.trim())) {
+          setLockError('יש למלא תשובה לכל שלוש שאלות השחזור.');
+          return;
+        }
 
         setLockSubmitting(true);
         try {
           const salt = randomBytes(16);
           const passwordHash = await hashLocalPassword(lockPassword, salt);
+          const hashedRecoveryAnswers = await createRecoveryAnswers(recoveryAnswers);
           const nextLock = {
             salt: toBase64Url(salt),
             passwordHash: toBase64Url(passwordHash),
-            credential: null
+            credential: null,
+            recoveryAnswers: hashedRecoveryAnswers
           };
           const nextProfile = { ...profile, name };
           localStorage.setItem(LOCAL_PROFILE_KEY, JSON.stringify(nextProfile));
@@ -1090,6 +1293,7 @@
           setIsRegistered(true);
           setLockPassword('');
           setLockPasswordConfirmation('');
+          setRecoveryAnswers(['', '', '']);
           setIsUnlocked(true);
         } catch (error) {
           console.error('Could not create the local Remind lock:', error);
@@ -1105,10 +1309,7 @@
         setLockSubmitting(true);
         try {
           const savedLock = localLock || readLocalLock();
-          const actualHash = await hashLocalPassword(lockPassword, fromBase64Url(savedLock.salt));
-          const expectedHash = fromBase64Url(savedLock.passwordHash);
-          const passwordMatches = actualHash.length === expectedHash.length &&
-            actualHash.every((byte, index) => byte === expectedHash[index]);
+          const passwordMatches = await verifyLocalPassword(lockPassword, savedLock);
           if (!passwordMatches) {
             setLockError('הסיסמה אינה נכונה. נסה שוב.');
             return;
@@ -1119,6 +1320,89 @@
         } catch (error) {
           console.error('Could not verify the local Remind password:', error);
           setLockError('לא ניתן לבדוק את הסיסמה השמורה. בדוק את הגדרות הדפדפן.');
+        } finally {
+          setLockSubmitting(false);
+        }
+      };
+
+      const handleLocalPasswordRecovery = async (event) => {
+        event.preventDefault();
+        setLockError('');
+        if (recoveryNewPassword.length < 8) {
+          setLockError('הסיסמה החדשה צריכה להכיל לפחות 8 תווים.');
+          return;
+        }
+        if (recoveryNewPassword !== recoveryNewPasswordConfirmation) {
+          setLockError('אימות הסיסמה אינו תואם לסיסמה החדשה.');
+          return;
+        }
+
+        setLockSubmitting(true);
+        try {
+          const savedLock = localLock || readLocalLock();
+          const answersMatch = await verifyRecoveryAnswers(recoveryAnswers, savedLock?.recoveryAnswers);
+          if (!answersMatch) {
+            setLockError('אחת או יותר מהתשובות אינן נכונות. בדוק/י את התשובות ונסה/י שוב.');
+            return;
+          }
+
+          const salt = randomBytes(16);
+          const passwordHash = await hashLocalPassword(recoveryNewPassword, salt);
+          const nextLock = {
+            ...savedLock,
+            salt: toBase64Url(salt),
+            passwordHash: toBase64Url(passwordHash)
+          };
+          localStorage.setItem(LOCAL_LOCK_KEY, JSON.stringify(nextLock));
+          sessionStorage.setItem(LOCAL_UNLOCKED_KEY, 'true');
+          setLocalLock(nextLock);
+          setLockPassword('');
+          setRecoveryAnswers(['', '', '']);
+          setRecoveryNewPassword('');
+          setRecoveryNewPasswordConfirmation('');
+          setUnlockMode('password');
+          setIsUnlocked(true);
+        } catch (error) {
+          console.error('Could not recover the local Remind password:', error);
+          setLockError('לא ניתן לשחזר את הסיסמה בדפדפן כרגע. בדוק את האחסון ונסה שוב.');
+        } finally {
+          setLockSubmitting(false);
+        }
+      };
+
+      const handleSaveRecoveryAnswers = async (event) => {
+        event.preventDefault();
+        setLockError('');
+        if (!recoverySetupPassword) {
+          setLockError('יש להזין את הסיסמה הנוכחית כדי לשנות את שאלות השחזור.');
+          return;
+        }
+        if (recoverySetupAnswers.some((answer) => !answer.trim())) {
+          setLockError('יש למלא תשובה לכל שלוש שאלות השחזור.');
+          return;
+        }
+
+        setLockSubmitting(true);
+        try {
+          const savedLock = localLock || readLocalLock();
+          if (!await verifyLocalPassword(recoverySetupPassword, savedLock)) {
+            setLockError('הסיסמה הנוכחית אינה נכונה.');
+            return;
+          }
+
+          const nextLock = {
+            ...savedLock,
+            recoveryAnswers: await createRecoveryAnswers(recoverySetupAnswers)
+          };
+          localStorage.setItem(LOCAL_LOCK_KEY, JSON.stringify(nextLock));
+          setLocalLock(nextLock);
+          setRecoveryAnswers(['', '', '']);
+          setRecoverySetupAnswers(['', '', '']);
+          setRecoverySetupPassword('');
+          setShowRecoverySettings(false);
+        } catch (error) {
+          console.error('Could not save local password recovery answers:', error);
+          setLockError('לא ניתן לשמור את שאלות השחזור בדפדפן. בדוק את האחסון ונסה שוב.');
         } finally {
           setLockSubmitting(false);
         }
@@ -1370,10 +1654,12 @@
               <p className="auth-caption">
                 {isFirstSetup
                   ? 'הגדר/י נעילה אישית למכשיר הזה.'
-                  : 'הזן/י את הסיסמה או השתמש/י ב־Face ID כדי להמשיך.'}
+                  : unlockMode === 'recovery'
+                    ? 'ענה/י על שאלות השחזור כדי ליצור סיסמה חדשה.'
+                    : 'הזן/י את הסיסמה או השתמש/י ב־Face ID כדי להמשיך.'}
               </p>
-              <form onSubmit={isFirstSetup ? handleCreateLocalLock : handleLocalUnlock}>
-                {isFirstSetup && (
+              {isFirstSetup ? (
+                <form onSubmit={handleCreateLocalLock}>
                   <label className="auth-field">
                     <span>השם שלך</span>
                     <input
@@ -1385,20 +1671,18 @@
                       placeholder="איך לקרוא לך?"
                     />
                   </label>
-                )}
-                <label className="auth-field">
-                  <span>{isFirstSetup ? 'יצירת סיסמה' : 'סיסמה'}</span>
-                  <input
-                    type="password"
-                    autoComplete={isFirstSetup ? 'new-password' : 'current-password'}
-                    minLength={isFirstSetup ? 8 : undefined}
-                    required
-                    value={lockPassword}
-                    onChange={(event) => setLockPassword(event.target.value)}
-                    placeholder={isFirstSetup ? 'לפחות 8 תווים' : 'הסיסמה המקומית שלך'}
-                  />
-                </label>
-                {isFirstSetup && (
+                  <label className="auth-field">
+                    <span>יצירת סיסמה</span>
+                    <input
+                      type="password"
+                      autoComplete="new-password"
+                      minLength={8}
+                      required
+                      value={lockPassword}
+                      onChange={(event) => setLockPassword(event.target.value)}
+                      placeholder="לפחות 8 תווים"
+                    />
+                  </label>
                   <label className="auth-field">
                     <span>אימות סיסמה</span>
                     <input
@@ -1411,22 +1695,132 @@
                       placeholder="הקלד/י שוב את הסיסמה"
                     />
                   </label>
-                )}
-                {lockError && <p role="alert" className="auth-message">{lockError}</p>}
-                <button type="submit" className="auth-submit-button" disabled={lockSubmitting}>
-                  {lockSubmitting ? 'רק רגע...' : isFirstSetup ? 'יצירת נעילה והמשך' : 'כניסה ל־Remind'}
-                </button>
-              </form>
-              {!isFirstSetup && biometricAvailable && (
-                <button
-                  type="button"
-                  className="auth-secondary-button"
-                  onClick={handleFaceIdUnlock}
-                  disabled={lockSubmitting}
-                >
-                  <span className="material-symbols-rounded align-middle ml-1" aria-hidden="true">face</span>
-                  פתיחה באמצעות Face ID
-                </button>
+                  {RECOVERY_QUESTIONS.map((question, index) => (
+                    <label className="auth-field" key={question}>
+                      <span>{question}</span>
+                      <input
+                        type="text"
+                        autoComplete="off"
+                        required
+                        value={recoveryAnswers[index]}
+                        onChange={(event) => setRecoveryAnswers((previous) => previous.map(
+                          (answer, answerIndex) => answerIndex === index ? event.target.value : answer
+                        ))}
+                        placeholder="תשובת שחזור"
+                      />
+                    </label>
+                  ))}
+                  <p className="auth-password-hint">בחר/י תשובות שתזכור/י. הן יישמרו כהצפנה מקומית ולא ניתן יהיה לשחזר אותן.</p>
+                  {lockError && <p role="alert" className="auth-message">{lockError}</p>}
+                  <button type="submit" className="auth-submit-button" disabled={lockSubmitting}>
+                    {lockSubmitting ? 'רק רגע...' : 'יצירת נעילה והמשך'}
+                  </button>
+                </form>
+              ) : unlockMode === 'recovery' ? (
+                <form onSubmit={handleLocalPasswordRecovery}>
+                  {RECOVERY_QUESTIONS.map((question, index) => (
+                    <label className="auth-field" key={question}>
+                      <span>{question}</span>
+                      <input
+                        type="text"
+                        autoComplete="off"
+                        required
+                        value={recoveryAnswers[index]}
+                        onChange={(event) => setRecoveryAnswers((previous) => previous.map(
+                          (answer, answerIndex) => answerIndex === index ? event.target.value : answer
+                        ))}
+                        placeholder="תשובת שחזור"
+                      />
+                    </label>
+                  ))}
+                  <label className="auth-field">
+                    <span>סיסמה חדשה</span>
+                    <input
+                      type="password"
+                      autoComplete="new-password"
+                      minLength={8}
+                      required
+                      value={recoveryNewPassword}
+                      onChange={(event) => setRecoveryNewPassword(event.target.value)}
+                      placeholder="לפחות 8 תווים"
+                    />
+                  </label>
+                  <label className="auth-field">
+                    <span>אימות הסיסמה החדשה</span>
+                    <input
+                      type="password"
+                      autoComplete="new-password"
+                      minLength={8}
+                      required
+                      value={recoveryNewPasswordConfirmation}
+                      onChange={(event) => setRecoveryNewPasswordConfirmation(event.target.value)}
+                      placeholder="הקלד/י שוב את הסיסמה"
+                    />
+                  </label>
+                  {lockError && <p role="alert" className="auth-message">{lockError}</p>}
+                  <button type="submit" className="auth-submit-button" disabled={lockSubmitting}>
+                    {lockSubmitting ? 'בודק...' : 'אימות ושמירת סיסמה חדשה'}
+                  </button>
+                  <button
+                    type="button"
+                    className="auth-secondary-button"
+                    onClick={() => {
+                      setUnlockMode('password');
+                      setRecoveryAnswers(['', '', '']);
+                      setRecoveryNewPassword('');
+                      setRecoveryNewPasswordConfirmation('');
+                      setLockError('');
+                    }}
+                  >
+                    חזרה לכניסה עם סיסמה
+                  </button>
+                </form>
+              ) : (
+                <>
+                  <form onSubmit={handleLocalUnlock}>
+                    <label className="auth-field">
+                      <span>סיסמה</span>
+                      <input
+                        type="password"
+                        autoComplete="current-password"
+                        required
+                        value={lockPassword}
+                        onChange={(event) => setLockPassword(event.target.value)}
+                        placeholder="הסיסמה המקומית שלך"
+                      />
+                    </label>
+                    {lockError && <p role="alert" className="auth-message">{lockError}</p>}
+                    <button type="submit" className="auth-submit-button" disabled={lockSubmitting}>
+                      {lockSubmitting ? 'רק רגע...' : 'כניסה ל־Remind'}
+                    </button>
+                  </form>
+                  {Array.isArray(localLock?.recoveryAnswers) && (
+                    <button
+                      type="button"
+                      className="auth-secondary-button"
+                      onClick={() => {
+                        setUnlockMode('recovery');
+                        setLockError('');
+                      }}
+                    >
+                      שכחתי את הסיסמה
+                    </button>
+                  )}
+                  {biometricAvailable && (
+                    <button
+                      type="button"
+                      className="auth-secondary-button"
+                      onClick={handleFaceIdUnlock}
+                      disabled={lockSubmitting}
+                    >
+                      <span className="material-symbols-rounded align-middle ml-1" aria-hidden="true">face</span>
+                      פתיחה באמצעות Face ID
+                    </button>
+                  )}
+                  {!Array.isArray(localLock?.recoveryAnswers) && (
+                    <p className="auth-password-hint">לא הוגדרו שאלות שחזור. לאחר הכניסה ניתן להגדיר אותן בהגדרות.</p>
+                  )}
+                </>
               )}
               {isFirstSetup && (
                 <p className="auth-note">
@@ -1640,6 +2034,40 @@
 
                 <div className="p-4 rounded-2xl bg-[var(--input-bg)] border border-[var(--card-border)] space-y-3">
                   <div>
+                    <label className="opacity-70 block mb-1 font-medium">תזכורות מוטיבציה שעתיות</label>
+                    <p className="text-sm font-medium">
+                      {hourlyRemindersEnabled ? 'התזכורות פעילות במכשיר הזה.' : 'קבל/י תזכורת עם הזמן שעבר ומשפט עידוד.'}
+                    </p>
+                  </div>
+                  {notificationStatus && (
+                    <p role="status" aria-live="polite" className="text-xs leading-relaxed opacity-80">
+                      {notificationStatus}
+                    </p>
+                  )}
+                  {hourlyRemindersEnabled ? (
+                    <button
+                      type="button"
+                      onClick={handleDisableHourlyReminders}
+                      className="w-full min-h-11 px-4 py-2.5 rounded-xl border border-rose-500/30 text-rose-600 font-medium transition-all active:scale-95"
+                    >
+                      כיבוי התזכורות השעתיות
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleEnableHourlyReminders}
+                      className="w-full min-h-11 px-4 py-2.5 rounded-xl border border-[var(--card-border)] font-medium transition-all active:scale-95"
+                    >
+                      הפעלת התראות ובדיקת התראה
+                    </button>
+                  )}
+                  <p className="text-[11px] leading-relaxed opacity-70">
+                    לאחר ההפעלה, שירות Push מתוזמן ישלח תזכורת בכל שעה גם כשהאתר סגור. נדרשים הרשאת התראות, התקנת האתר כאפליקציה במכשירי iPhone, ופריסת שירות ההתראות ב־Supabase.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-[var(--input-bg)] border border-[var(--card-border)] space-y-3">
+                  <div>
                     <label className="opacity-70 block mb-1">גישה מקומית</label>
                     <p className="text-sm font-medium">הנתונים נשמרים בדפדפן במכשיר הזה בלבד.</p>
                   </div>
@@ -1659,8 +2087,59 @@
                   >
                     נעילת האפליקציה
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowRecoverySettings(!showRecoverySettings);
+                      setLockError('');
+                    }}
+                    className="w-full min-h-11 px-4 py-2.5 rounded-xl border border-[var(--card-border)] font-medium transition-all active:scale-95"
+                  >
+                    {Array.isArray(localLock?.recoveryAnswers) ? 'עדכון שאלות שחזור' : 'הגדרת שאלות שחזור'}
+                  </button>
+                  {showRecoverySettings && (
+                    <form onSubmit={handleSaveRecoveryAnswers} className="space-y-3">
+                      <p className="text-[11px] leading-relaxed opacity-70">
+                        כדי להגן על הנעילה, יש לאמת את הסיסמה הנוכחית. בחר/י תשובות שאחרים לא יוכלו לנחש בקלות.
+                      </p>
+                      <label className="auth-field">
+                        <span>הסיסמה הנוכחית</span>
+                        <input
+                          type="password"
+                          autoComplete="current-password"
+                          required
+                          value={recoverySetupPassword}
+                          onChange={(event) => setRecoverySetupPassword(event.target.value)}
+                          placeholder="הסיסמה המקומית שלך"
+                        />
+                      </label>
+                      {RECOVERY_QUESTIONS.map((question, index) => (
+                        <label className="auth-field" key={question}>
+                          <span>{question}</span>
+                          <input
+                            type="text"
+                            autoComplete="off"
+                            required
+                            value={recoverySetupAnswers[index]}
+                            onChange={(event) => setRecoverySetupAnswers((previous) => previous.map(
+                              (answer, answerIndex) => answerIndex === index ? event.target.value : answer
+                            ))}
+                            placeholder="תשובת שחזור"
+                          />
+                        </label>
+                      ))}
+                      {lockError && <p role="alert" className="auth-message">{lockError}</p>}
+                      <button
+                        type="submit"
+                        className="auth-submit-button"
+                        disabled={lockSubmitting}
+                      >
+                        {lockSubmitting ? 'שומר...' : 'שמירת שאלות שחזור'}
+                      </button>
+                    </form>
+                  )}
                   <p className="text-[11px] leading-relaxed opacity-70">
-                    אין שחזור סיסמה. אם שוכחים אותה, מחיקת נתוני האתר בדפדפן תסיר גם את הנעילה וגם את הנתונים המקומיים.
+                    השאלות מאפשרות לאפס את הסיסמה במכשיר הזה בלבד. הן נשמרות כגיבובים מקומיים, אך תשובות שקל לנחש עלולות לאבטח פחות.
                   </p>
                 </div>
 
