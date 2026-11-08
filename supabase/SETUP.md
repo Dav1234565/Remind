@@ -35,12 +35,26 @@ supabase secrets set --project-ref lguuxrwjwwzxkhydjryo \
 
 ## 3. הפעלת תזמון שעתי
 
-ב־Supabase Dashboard יש להפעיל את ההרחבות `pg_cron` ו־`pg_net`, ולהוסיף ב־Vault שני סודות:
+ב־Supabase Dashboard יש להפעיל את ההרחבות `pg_cron`, `pg_net` ו־`supabase_vault`. לאחר פריסת המיגרציה, הרץ/י פעם אחת ב־SQL Editor את הקוד הבא כדי ליצור אסימון אקראי ב־Vault. האסימון אינו נחשף בתוצאות:
 
-- `remind_project_url` — `https://lguuxrwjwwzxkhydjryo.supabase.co`
-- `remind_service_role_key` — מפתח ה־`service_role` של הפרויקט. יש לשמור אותו ב־Vault בלבד, לעולם לא בקוד הדפדפן.
+```sql
+do $$
+begin
+  if not exists (
+    select 1 from vault.decrypted_secrets
+    where name = 'remind_dispatch_token'
+  ) then
+    perform vault.create_secret(
+      encode(gen_random_bytes(32), 'hex'),
+      'remind_dispatch_token',
+      'Authorization for scheduled Remind push dispatch'
+    );
+  end if;
+end;
+$$;
+```
 
-לאחר מכן הרץ/י ב־SQL Editor:
+לאחר מכן הרץ/י ב־SQL Editor. התזמון פונה לפונקציה בכל דקה; היא מאמתת את האסימון מול Vault ושולחת לכל התקנה לכל היותר התראה אחת בתחילת כל שעה:
 
 ```sql
 select cron.unschedule(jobid)
@@ -52,20 +66,20 @@ select cron.schedule(
   '* * * * *',
   $$
   select net.http_post(
-    url := (
-      select decrypted_secret
-      from vault.decrypted_secrets
-      where name = 'remind_project_url'
-    ) || '/functions/v1/remind-push',
+    url := 'https://lguuxrwjwwzxkhydjryo.supabase.co/functions/v1/remind-push',
     headers := jsonb_build_object(
+      'apikey', 'sb_publishable_mOtrogkoIlfugUNztuFyYA_yN7T-av8',
       'Content-Type', 'application/json',
-      'Authorization', 'Bearer ' || (
+      'Authorization', 'Bearer sb_publishable_mOtrogkoIlfugUNztuFyYA_yN7T-av8'
+    ),
+    body := jsonb_build_object(
+      'action', 'dispatch',
+      'dispatchToken', (
         select decrypted_secret
         from vault.decrypted_secrets
-        where name = 'remind_service_role_key'
+        where name = 'remind_dispatch_token'
       )
-    ),
-    body := jsonb_build_object('action', 'dispatch')
+    )
   );
   $$
 );

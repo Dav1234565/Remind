@@ -206,9 +206,22 @@ Deno.serve(async (request) => {
   }
 
   if (payload.action === 'dispatch') {
-    if (bearerToken !== SERVICE_ROLE_KEY) {
+    if (!SERVICE_ROLE_KEY || !payload.dispatchToken) {
       return jsonResponse(401, { error: 'Unauthorized.' }, requestOrigin);
     }
+
+    const tokenResponse = await databaseRequest('rpc/validate_remind_push_dispatch_token', {
+      method: 'POST',
+      body: JSON.stringify({ p_token: payload.dispatchToken })
+    });
+    if (!tokenResponse.ok) {
+      console.error('Could not validate scheduled dispatch token:', await tokenResponse.text());
+      return jsonResponse(500, { error: 'Could not authorize scheduled dispatch.' }, requestOrigin);
+    }
+    if (await tokenResponse.json() !== true) {
+      return jsonResponse(401, { error: 'Unauthorized.' }, requestOrigin);
+    }
+
     try {
       return jsonResponse(200, await dispatchScheduledPushes(), requestOrigin);
     } catch (error) {
