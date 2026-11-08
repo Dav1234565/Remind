@@ -551,6 +551,170 @@
       100% { left: 110%; transform: scale(1); }
     }
 
+    .assistant-launcher {
+      position: fixed;
+      z-index: 45;
+      right: max(20px, env(safe-area-inset-right));
+      bottom: max(26px, env(safe-area-inset-bottom));
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 48px;
+      padding: 0 16px;
+      border: 0;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #2563eb, #7c3aed);
+      color: #fff;
+      font-weight: 700;
+      box-shadow: 0 8px 26px rgba(37, 99, 235, 0.32);
+      cursor: pointer;
+    }
+
+    .assistant-launcher .material-symbols-rounded {
+      font-size: 22px;
+    }
+
+    .assistant-panel {
+      position: fixed;
+      z-index: 44;
+      right: max(20px, env(safe-area-inset-right));
+      bottom: max(86px, calc(60px + env(safe-area-inset-bottom)));
+      display: flex;
+      flex-direction: column;
+      width: min(390px, calc(100vw - 32px));
+      height: min(560px, calc(100dvh - 120px - env(safe-area-inset-bottom)));
+      overflow: hidden;
+      border: 1px solid var(--card-border);
+      border-radius: 22px;
+      box-shadow: 0 18px 55px rgba(0, 0, 0, 0.22);
+      backdrop-filter: blur(24px);
+    }
+
+    .assistant-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .assistant-icon-button {
+      display: grid;
+      width: 38px;
+      height: 38px;
+      flex: 0 0 auto;
+      place-items: center;
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      background: var(--input-bg);
+      cursor: pointer;
+    }
+
+    .assistant-icon-button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .assistant-privacy {
+      margin: 0;
+      padding: 10px 16px;
+      color: var(--text-color);
+      font-size: 11px;
+      line-height: 1.5;
+      opacity: 0.7;
+    }
+
+    .assistant-messages {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      gap: 10px;
+      overflow-y: auto;
+      padding: 12px 16px;
+      overscroll-behavior: contain;
+    }
+
+    .assistant-message {
+      max-width: 88%;
+      margin: 0;
+      padding: 10px 12px;
+      border-radius: 16px;
+      font-size: 14px;
+      line-height: 1.55;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    .assistant-message-user {
+      align-self: flex-start;
+      border-bottom-right-radius: 5px;
+      background: #2563eb;
+      color: #fff;
+    }
+
+    .assistant-message-ai {
+      align-self: flex-end;
+      border: 1px solid var(--card-border);
+      border-bottom-left-radius: 5px;
+      background: var(--input-bg);
+    }
+
+    .assistant-empty {
+      margin: auto;
+      padding: 20px;
+      text-align: center;
+      opacity: 0.65;
+    }
+
+    .assistant-error {
+      margin: 0;
+      padding: 0 16px 8px;
+      color: #dc2626;
+      font-size: 12px;
+    }
+
+    .assistant-form {
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+      padding: 12px;
+      border-top: 1px solid var(--card-border);
+    }
+
+    .assistant-form textarea {
+      min-height: 44px;
+      max-height: 110px;
+      flex: 1;
+      resize: vertical;
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      background: var(--input-bg);
+      color: var(--text-color);
+      padding: 10px 12px;
+      font: inherit;
+      font-size: 14px;
+    }
+
+    .assistant-form button {
+      display: grid;
+      width: 44px;
+      height: 44px;
+      flex: 0 0 auto;
+      place-items: center;
+      border: 0;
+      border-radius: 14px;
+      background: #2563eb;
+      color: white;
+      cursor: pointer;
+    }
+
+    .assistant-form button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
     @media (max-width: 640px) {
       #root > div {
         min-height: 100vh;
@@ -642,6 +806,18 @@
         width: min(92vw, 360px);
       }
 
+      .assistant-launcher {
+        right: max(14px, env(safe-area-inset-right));
+        bottom: calc(78px + env(safe-area-inset-bottom));
+      }
+
+      .assistant-panel {
+        right: max(12px, env(safe-area-inset-right));
+        bottom: calc(138px + env(safe-area-inset-bottom));
+        width: calc(100vw - 24px - env(safe-area-inset-left) - env(safe-area-inset-right));
+        height: min(560px, calc(100dvh - 180px - env(safe-area-inset-top) - env(safe-area-inset-bottom)));
+      }
+
       .apple-navbar {
         width: 100%;
         justify-content: space-around;
@@ -701,6 +877,8 @@
     const LOCAL_UNLOCKED_KEY = 'remind:personal:unlocked';
     const HOURLY_REMINDERS_KEY = 'remind:personal:hourly-reminders';
     const PUSH_INSTALLATION_ID_KEY = 'remind:personal:push-installation-id';
+    const AI_INSTALLATION_ID_KEY = 'remind:personal:ai-installation-id';
+    const AI_CHAT_HISTORY_KEY = 'remind:personal:ai-chat-history';
     const SUPABASE_URL = 'https://lguuxrwjwwzxkhydjryo.supabase.co';
     const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_mOtrogkoIlfugUNztuFyYA_yN7T-av8';
     const LEGACY_SUPABASE_AUTH_KEY = 'sb-lguuxrwjwwzxkhydjryo-auth-token';
@@ -741,6 +919,15 @@
       if (!id) {
         id = crypto.randomUUID();
         localStorage.setItem(PUSH_INSTALLATION_ID_KEY, id);
+      }
+      return id;
+    };
+
+    const getAIInstallationId = () => {
+      let id = localStorage.getItem(AI_INSTALLATION_ID_KEY);
+      if (!id) {
+        id = crypto.randomUUID();
+        localStorage.setItem(AI_INSTALLATION_ID_KEY, id);
       }
       return id;
     };
@@ -1017,6 +1204,25 @@
         Notification.permission === 'granted'
       ));
       const [notificationStatus, setNotificationStatus] = useState('');
+      const [assistantOpen, setAssistantOpen] = useState(false);
+      const [assistantDraft, setAssistantDraft] = useState('');
+      const [assistantSending, setAssistantSending] = useState(false);
+      const [assistantError, setAssistantError] = useState('');
+      const [assistantMessages, setAssistantMessages] = useState(() => {
+        try {
+          const savedMessages = JSON.parse(localStorage.getItem(AI_CHAT_HISTORY_KEY) || '[]');
+          return Array.isArray(savedMessages)
+            ? savedMessages.filter((item) =>
+              item &&
+              ['user', 'assistant'].includes(item.role) &&
+              typeof item.text === 'string'
+            ).slice(-30)
+            : [];
+        } catch (error) {
+          console.error('Saved AI chat history is invalid:', error);
+          return [];
+        }
+      });
       const [clock, setClock] = useState(() => new Date());
       const [isRegistered, setIsRegistered] = useState(false);
       const [onboardingError, setOnboardingError] = useState('');
@@ -1077,6 +1283,15 @@
       const [resetReason, setResetReason] = useState('');
 
       const accountStorageKey = (key) => `remind:${LOCAL_ACCOUNT_ID}:${key}`;
+
+      useEffect(() => {
+        try {
+          localStorage.setItem(AI_CHAT_HISTORY_KEY, JSON.stringify(assistantMessages.slice(-30)));
+        } catch (error) {
+          console.error('Could not save AI chat history locally:', error);
+          setAssistantError('לא ניתן לשמור את השיחה במכשיר. בדוק/י את נפח האחסון הזמין.');
+        }
+      }, [assistantMessages]);
 
       useEffect(() => {
         migrateLegacyLocalData();
@@ -1156,6 +1371,46 @@
         };
         const registration = await navigator.serviceWorker.ready;
         await registration.showNotification('⏰ Remind - עדכון שעתי', options);
+      };
+
+      const handleSendAssistantMessage = async (event) => {
+        event.preventDefault();
+        const message = assistantDraft.trim();
+        if (!message || assistantSending) return;
+
+        setAssistantError('');
+        setAssistantSending(true);
+        const history = assistantMessages.slice(-12).map(({ role, text }) => ({
+          role: role === 'assistant' ? 'model' : 'user',
+          text: text.slice(0, 1200)
+        }));
+        setAssistantMessages((current) => [...current, { role: 'user', text: message }].slice(-30));
+        try {
+          const result = await fetchPushFunction({
+            action: 'assistant-chat',
+            installationId: getAIInstallationId(),
+            message,
+            messages: history
+          });
+          if (typeof result.text !== 'string' || !result.text.trim()) {
+            throw new Error('העוזר לא החזיר תשובה. אפשר לנסות שוב.');
+          }
+          setAssistantMessages((current) => [
+            ...current,
+            { role: 'assistant', text: result.text.trim() }
+          ].slice(-30));
+          setAssistantDraft('');
+        } catch (error) {
+          console.error('Could not send message to the Remind AI assistant:', error);
+          setAssistantError(error.message || 'לא ניתן לשלוח את ההודעה כרגע. נסה/י שוב.');
+        } finally {
+          setAssistantSending(false);
+        }
+      };
+
+      const handleClearAssistantChat = () => {
+        setAssistantMessages([]);
+        setAssistantError('');
       };
 
       useEffect(() => {
@@ -1519,6 +1774,7 @@
       const handleLockApp = () => {
         sessionStorage.removeItem(LOCAL_UNLOCKED_KEY);
         setLockError('');
+        setAssistantOpen(false);
         setIsUnlocked(false);
         setActiveTab('timer');
       };
@@ -2169,6 +2425,90 @@
               </a>
             </nav>
           </div>
+
+          <button
+            type="button"
+            className="assistant-launcher"
+            onClick={() => setAssistantOpen((open) => !open)}
+            aria-label={assistantOpen ? 'סגירת העוזר האישי' : 'פתיחת העוזר האישי'}
+            aria-expanded={assistantOpen}
+          >
+            <span className="material-symbols-rounded" aria-hidden="true">
+              {assistantOpen ? 'close' : 'auto_awesome'}
+            </span>
+            {!assistantOpen && <span>העוזר שלי</span>}
+          </button>
+
+          {assistantOpen && (
+            <section className="assistant-panel apple-card" aria-label="העוזר האישי של Remind">
+              <header className="assistant-header">
+                <div>
+                  <h2 className="font-bold">העוזר האישי שלך</h2>
+                  <p className="text-xs opacity-70">אפשר לדבר על מטרות, הרגלים או כל מה שיעזור לך להתקדם.</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    className="assistant-icon-button"
+                    onClick={handleClearAssistantChat}
+                    disabled={assistantSending || assistantMessages.length === 0}
+                    aria-label="מחיקת השיחה"
+                    title="מחיקת השיחה"
+                  >
+                    <span className="material-symbols-rounded" aria-hidden="true">delete</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="assistant-icon-button"
+                    onClick={() => setAssistantOpen(false)}
+                    aria-label="סגירת הצ'אט"
+                  >
+                    <span className="material-symbols-rounded" aria-hidden="true">close</span>
+                  </button>
+                </div>
+              </header>
+              <p className="assistant-privacy">
+                השיחה נשמרת במכשיר הזה. ההודעה והיסטוריה קצרה נשלחות ל־Google Gemini; בתוכנית החינמית Google עשויה להשתמש בתוכן לשיפור השירותים שלה. אין לשלוח סיסמאות או מידע רגיש. השימוש כפוף למכסות Gemini.
+              </p>
+              <div className="assistant-messages" aria-live="polite">
+                {assistantMessages.length === 0 && (
+                  <p className="assistant-empty">
+                    היי{profile.name ? ` ${profile.name}` : ''}! איך אפשר לעזור לך היום?
+                  </p>
+                )}
+                {assistantMessages.map((item, index) => (
+                  <p
+                    key={`${index}-${item.role}`}
+                    className={`assistant-message ${item.role === 'user' ? 'assistant-message-user' : 'assistant-message-ai'}`}
+                  >
+                    {item.text}
+                  </p>
+                ))}
+                {assistantSending && (
+                  <p className="assistant-message assistant-message-ai" role="status">העוזר חושב...</p>
+                )}
+              </div>
+              {assistantError && <p className="assistant-error" role="alert">{assistantError}</p>}
+              <form className="assistant-form" onSubmit={handleSendAssistantMessage}>
+                <textarea
+                  value={assistantDraft}
+                  onChange={(event) => setAssistantDraft(event.target.value)}
+                  placeholder="כתוב/י הודעה לעוזר..."
+                  aria-label="הודעה לעוזר"
+                  maxLength={1200}
+                  rows={2}
+                  disabled={assistantSending}
+                />
+                <button
+                  type="submit"
+                  disabled={!assistantDraft.trim() || assistantSending}
+                  aria-label="שליחת הודעה"
+                >
+                  <span className="material-symbols-rounded" aria-hidden="true">send</span>
+                </button>
+              </form>
+            </section>
+          )}
 
           {/* --- מודאל שאלון יומי --- */}
           {showDayModal && (

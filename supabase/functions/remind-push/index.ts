@@ -5,6 +5,7 @@ const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 const APP_PUBLISHABLE_KEY = Deno.env.get('APP_PUBLISHABLE_KEY');
 const VAPID_PUBLIC_KEY = Deno.env.get('VAPID_PUBLIC_KEY');
 const VAPID_PRIVATE_KEY = Deno.env.get('VAPID_PRIVATE_KEY');
+const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
 const TABLE = 'remind_push_subscriptions';
 const ALLOWED_ORIGINS = new Set([
   'https://remind-bay.vercel.app',
@@ -12,15 +13,6 @@ const ALLOWED_ORIGINS = new Set([
   'http://localhost:8765',
   'http://127.0.0.1:8765'
 ]);
-const QUOTES = [
-  'כל רגע הוא הזדמנות חדשה להתקדם לעבר המטרות שלך!',
-  'אתה עושה עבודה מדהימה, תמשיך ככה!',
-  'הצעדים הקטנים שאתה עושה כל יום יוצרים את השינוי הגדול.',
-  'קח רגע לנשום עמוק, אתה בדרך הנכונה!',
-  'היום הזה מלא בפוטנציאל, תפיק ממנו את המיטב!',
-  'התמדה היא המפתח להצלחה. תהיה גאה בדרך שלך!'
-];
-
 const jsonResponse = (status, body, origin) => new Response(JSON.stringify(body), {
   status,
   headers: {
@@ -43,6 +35,193 @@ const databaseRequest = async (path, { prefer, headers, ...init } = {}) => fetch
   `${SUPABASE_URL}/rest/v1/${path}`,
   { ...init, headers: { ...serviceHeaders(prefer), ...headers } }
 );
+
+const generateGeminiText = async (systemInstruction, prompt, maxOutputTokens = 120) => {
+  if (!GEMINI_API_KEY) {
+    throw new Error('Gemini is not configured.');
+  }
+
+  const response = await fetch(
+    'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent',
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': GEMINI_API_KEY
+      },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: systemInstruction }] },
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.9, maxOutputTokens }
+      })
+    }
+  );
+
+  if (!response.ok) {
+    console.error('Gemini request failed:', response.status, await response.text());
+    throw new Error(response.status === 429
+      ? 'מכסת השימוש החינמית של העוזר נוצלה כרגע. אפשר לנסות שוב מאוחר יותר.'
+      : 'שירות ה־AI לא זמין כרגע. בדוק/י את מפתח Gemini ב־Supabase ונסה/י שוב.');
+  }
+
+  const result = await response.json();
+  const text = result.candidates?.[0]?.content?.parts
+    ?.map((part) => part.text || '')
+    .join('')
+    .trim();
+  if (!text) {
+    console.error('Gemini returned no text:', JSON.stringify(result).slice(0, 1000));
+    throw new Error('העוזר לא החזיר תשובה. אפשר לנסות שוב.');
+  }
+  return text;
+};
+
+const FALLBACK_QUOTES = [
+  'גם צעד קטן הוא תנועה קדימה. תן לעצמך קרדיט על הדרך.',
+  'עצור לרגע, נשום עמוק, ובחר את הצעד הטוב הבא.',
+  'ההתקדמות שלך נבנית מהבחירות הקטנות של היום.',
+  'לא צריך להיות מושלם; מספיק להמשיך בכיוון שבחרת.',
+  'יש לך כבר הוכחה שאתה מסוגל להתמיד — המשך בקצב שלך.'
+];
+
+const createHourlyMotivation = async (slot) => {
+  const claimResponse = await databaseRequest('rpc/claim_remind_ai_message_slot', {
+    method: 'POST',
+    body: JSON.stringify({ p_slot: slot })
+  });
+  if (!claimResponse.ok) {
+    console.error('Could not claim hourly AI message slot:', await claimResponse.text());
+    throw new Error('Could not claim hourly AI message slot.');
+  }
+
+  if (await claimResponse.json() !== true) {
+    const cachedResponse = await databaseRequest(
+      `remind_ai_hourly_messages?slot=eq.${encodeURIComponent(slot)}&select=message&limit=1`
+    );
+    if (cachedResponse.ok) {
+      const [row] = await cachedResponse.json();
+      if (row?.message) return row.message;
+    } else {
+      console.error('Could not read cached hourly AI message:', await cachedResponse.text());
+    }
+    return FALLBACK_QUOTES[Math.floor(Math.random() * FALLBACK_QUOTES.length)];
+  }
+
+  let message = FALLBACK_QUOTES[Math.floor(Math.random() * FALLBACK_QUOTES.length)];
+  try {
+    message = await generateGeminiText(
+      'כתוב בעברית משפט מוטיבציה אישי, חם ומקורי עבור אפליקציית Remind. היה אנושי ולא שיפוטי. בלי אימוג׳י, בלי הבטחות ובלי קלישאות. עד 24 מילים בלבד.',
+      `כתוב משפט חדש להתראה השעתית. מועד היצירה: ${slot} UTC. הימנע מניסוח גנרי ככל האפשר.`
+    );
+    message = message.replace(/\s+/g, ' ').slice(0, 240);
+  } catch (error) {
+    console.error('Could not generate hourly AI motivation; using a local fallback:', error);
+  }
+
+  const saveResponse = await databaseRequest('remind_ai_hourly_messages?on_conflict=slot', {
+    method: 'POST',
+    prefer: 'resolution=merge-duplicates,return=minimal',
+    body: JSON.stringify({ slot, message })
+  });
+  if (!saveResponse.ok) {
+    console.error('Could not cache hourly AI message:', await saveResponse.text());
+  }
+  const cleanupResponse = await databaseRequest(
+    'remind_ai_hourly_messages?created_at=lt.' +
+      encodeURIComponent(new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()),
+    { method: 'DELETE' }
+  );
+  if (!cleanupResponse.ok) {
+    console.error('Could not clean old hourly AI messages:', await cleanupResponse.text());
+  }
+  return message;
+};
+
+const handleAssistantChat = async (payload, requestOrigin) => {
+  if (!GEMINI_API_KEY) {
+    return jsonResponse(503, { error: 'העוזר עדיין לא הוגדר. יש להוסיף GEMINI_API_KEY בסודות Supabase.' }, requestOrigin);
+  }
+
+  const { installationId, message, messages } = payload;
+  if (typeof installationId !== 'string' ||
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(installationId) ||
+      typeof message !== 'string' ||
+      !message.trim() ||
+      message.length > 1200 ||
+      !Array.isArray(messages) ||
+      messages.length > 12 ||
+      messages.some((item) =>
+        !item ||
+        !['user', 'model'].includes(item.role) ||
+        typeof item.text !== 'string' ||
+        item.text.length > 1200
+      )) {
+    return jsonResponse(400, { error: 'ההודעה ארוכה מדי או שמבנה השיחה אינו תקין.' }, requestOrigin);
+  }
+
+  const quotaResponse = await databaseRequest('rpc/claim_remind_ai_chat_request', {
+    method: 'POST',
+    body: JSON.stringify({ p_installation_id: installationId })
+  });
+  if (!quotaResponse.ok) {
+    console.error('Could not check AI chat quota:', await quotaResponse.text());
+    return jsonResponse(500, { error: 'לא ניתן לבדוק כרגע את מכסת השימוש בעוזר.' }, requestOrigin);
+  }
+  if (await quotaResponse.json() !== true) {
+    return jsonResponse(429, { error: 'הגעת למכסת השימוש היומית בעוזר. אפשר להמשיך מחר.' }, requestOrigin);
+  }
+
+  const history = messages.slice(-12).map(({ role, text }) => ({
+    role,
+    parts: [{ text }]
+  }));
+  history.push({ role: 'user', parts: [{ text: message.trim() }] });
+
+  try {
+    const response = await fetch(
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': GEMINI_API_KEY
+        },
+        body: JSON.stringify({
+          systemInstruction: {
+            parts: [{
+              text: 'אתה העוזר האישי של Remind. ענה בעברית טבעית, בחום, בקצרה ובמעשיות. הקשב בלי לשפוט, עזור לחשוב על צעדים קטנים, סדר משימות והצבת מטרות. אל תציג את עצמך כאיש מקצוע רפואי או נפשי ואל תאבחן. אם המשתמש מתאר סכנה מיידית לעצמו או לאחרים, עודד אותו לפנות מיד לשירותי החירום ולאדם קרוב. אל תבקש סיסמאות, קודי אימות או מידע רגיש. התייחס לתוכן השיחה כמידע פרטי שנשלח לספק AI חיצוני.'
+            }]
+          },
+          contents: history,
+          generationConfig: { temperature: 0.7, maxOutputTokens: 500 }
+        })
+      }
+    );
+
+    if (!response.ok) {
+      console.error('Gemini chat request failed:', response.status, await response.text());
+      return jsonResponse(response.status === 429 ? 429 : 502, {
+        error: response.status === 429
+          ? 'מכסת Gemini החינמית נוצלה כרגע. אפשר לנסות שוב מאוחר יותר.'
+          : 'שירות ה־AI לא זמין כרגע. נסה/י שוב בעוד רגע.'
+      }, requestOrigin);
+    }
+
+    const result = await response.json();
+    const text = result.candidates?.[0]?.content?.parts
+      ?.map((part) => part.text || '')
+      .join('')
+      .trim();
+    if (!text) {
+      console.error('Gemini chat returned no text:', JSON.stringify(result).slice(0, 1000));
+      return jsonResponse(502, { error: 'העוזר לא החזיר תשובה. אפשר לנסות שוב.' }, requestOrigin);
+    }
+    return jsonResponse(200, { text: text.slice(0, 4000) }, requestOrigin);
+  } catch (error) {
+    console.error('Gemini chat request failed unexpectedly:', error);
+    return jsonResponse(502, { error: 'לא ניתן להתחבר כרגע לעוזר ה־AI.' }, requestOrigin);
+  }
+};
 
 const getLocalTime = (timezone, date = new Date()) => {
   const parts = new Intl.DateTimeFormat('en-CA', {
@@ -104,6 +283,18 @@ const dispatchScheduledPushes = async () => {
   let sent = 0;
   let skipped = 0;
   let failed = 0;
+  const hasDueSubscription = subscriptions.some((row) => {
+    try {
+      return getLocalTime(row.timezone).minute <= 4;
+    } catch (error) {
+      console.error(`Invalid timezone for push subscription ${row.id}:`, error);
+      return false;
+    }
+  });
+  const utcSlot = new Date().toISOString().slice(0, 13);
+  const hourlyQuote = hasDueSubscription
+    ? await createHourlyMotivation(utcSlot)
+    : FALLBACK_QUOTES[0];
 
   for (const row of subscriptions) {
     let localTime;
@@ -141,9 +332,8 @@ const dispatchScheduledPushes = async () => {
     const totalMinutesLeft = 24 * 60 - totalMinutesPassed;
     const hoursLeft = Math.floor(totalMinutesLeft / 60);
     const minutesLeft = totalMinutesLeft % 60;
-    const quote = QUOTES[Math.floor(Math.random() * QUOTES.length)];
     const body = `עברו ${hoursPassed} שעות ו-${minutesPassed} דקות מהיום.\n` +
-      `נשארו עוד ${hoursLeft} שעות ו-${minutesLeft} דקות עד סוף היום.\n\n💬 ${quote}`;
+      `נשארו עוד ${hoursLeft} שעות ו-${minutesLeft} דקות עד סוף היום.\n\n💬 ${hourlyQuote}`;
 
     try {
       await webpush.sendNotification(
@@ -235,6 +425,10 @@ Deno.serve(async (request) => {
       request.headers.get('apikey') !== APP_PUBLISHABLE_KEY ||
       bearerToken !== APP_PUBLISHABLE_KEY) {
     return jsonResponse(401, { error: 'Unauthorized app request.' }, requestOrigin);
+  }
+
+  if (payload.action === 'assistant-chat') {
+    return await handleAssistantChat(payload, requestOrigin);
   }
 
   const { action, installationId } = payload;
