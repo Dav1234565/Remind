@@ -20,6 +20,7 @@ self.addEventListener('push', (event) => {
       icon: payload.icon || './assets/remind-logo.png',
       badge: payload.badge || './assets/remind-icon-192.png',
       tag: payload.tag || 'remind-hourly-motivation',
+      renotify: true,
       data: { url: payload.url || './' }
     });
   })());
